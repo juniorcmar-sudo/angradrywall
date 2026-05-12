@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+}
+
+enum CustomerType {
+  COMMON
+  DRYWALL_WORKER
+}
+
+enum PaymentMethod {
+  PIX
+  CASH
+  DEBIT
+  CREDIT
+  LINK_3X
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  AWAITING_PAYMENT
+  PAID
+  CANCELLED
+}
+
+enum StockMovementType {
+  ENTRY_MANUAL
+  ENTRY_SUPPLIER
+  ENTRY_PURCHASE
+  ENTRY_RESTOCK
+  EXIT_SALE
+  EXIT_LOSS
+  EXIT_DAMAGE
+  EXIT_BREAK
+  ADJUSTMENT
+}
+
+enum PendingOrderStatus {
+  WAITING
+  PARTIAL
+  FULFILLED
+  CANCELLED
+}
+
+enum TimelineEntityType {
+  CUSTOMER
+  QUOTE
+  SALE
+  PRODUCT
+  STOCK
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(OPERATOR)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── Customers ────────────────────────────────────────────────────────────────
+
+model Customer {
+  id        String       @id @default(cuid())
+  name      String
+  type      CustomerType @default(COMMON)
+  razaoSocial String?      @map("razao_social")
+  cpfCnpj     String?      @map("cpf_cnpj")
+  email       String?
+  phone1      String?      @map("phone_1")
+  phone2      String?      @map("phone_2")
+  cep         String?
+  rua         String?
+  numero      String?
+  bairro      String?
+  cidade      String?
+  uf          String?
+  address     String?
+  notes       String?
+  active      Boolean      @default(true)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  quotes        Quote[]
+  sales         Sale[]
+  pendingOrders PendingOrder[]
+
+  @@map("customers")
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+// ─── Tags ─────────────────────────────────────────────────────────────────────
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  productTags ProductTag[]
+
+  @@map("tags")
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id               String   @id @default(cuid())
+  internalCode     String   @unique @map("internal_code")
+  name             String
+  brand            String?
+  description      String?
+  categoryId       String?  @map("category_id")
+  stock            Int      @default(0)
+  minimumStock     Int      @default(0) @map("minimum_stock")
+  basePriceCommon  Decimal  @map("base_price_common") @db.Decimal(10, 2)
+  basePriceDrywall Decimal  @map("base_price_drywall") @db.Decimal(10, 2)
+  active           Boolean  @default(true)
+  deleted          Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  productTags    ProductTag[]
+  stockMovements StockMovement[]
+  quoteItems     QuoteItem[]
+  saleItems      SaleItem[]
+  pendingOrders  PendingOrder[]
+
+  @@map("products")
+}
+
+model ProductTag {
+  productId String @map("product_id")
+  tagId     String @map("tag_id")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@map("product_tags")
+}
+
+// ─── Stock Movements ──────────────────────────────────────────────────────────
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  productId   String            @map("product_id")
+  type        StockMovementType
+  quantity    Int
+  notes       String?
+  referenceId String?           @map("reference_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ─── Freight Zones ────────────────────────────────────────────────────────────
+
+model FreightZone {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  price     Decimal  @db.Decimal(10, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  quotes Quote[]
+
+  @@map("freight_zones")
+}
+
+// ─── Quotes ───────────────────────────────────────────────────────────────────
+
+model Quote {
+  id            String        @id @default(cuid())
+  number        Int           @unique @default(autoincrement())
+  customerId    String        @map("customer_id")
+  status        QuoteStatus   @default(DRAFT)
+  paymentMethod PaymentMethod? @map("payment_method")
+  freightType   String        @default("DELIVERY") @map("freight_type")
+  freightZoneId String?       @map("freight_zone_id")
+  freightValue  Decimal       @default(0) @map("freight_value") @db.Decimal(10, 2)
+  subtotal      Decimal       @default(0) @db.Decimal(10, 2)
+  discount      Decimal       @default(0) @db.Decimal(10, 2)
+  finalTotal    Decimal       @default(0) @map("final_total") @db.Decimal(10, 2)
+  installments  Int?          @map("installments")
+  validUntil    DateTime?     @map("valid_until")
+  internalNotes String?       @map("internal_notes")
+  customerNotes String?       @map("customer_notes")
+  sentAt        DateTime?     @map("sent_at")
+  paidAt        DateTime?     @map("paid_at")
+  cancelledAt   DateTime?     @map("cancelled_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  freightZone FreightZone? @relation(fields: [freightZoneId], references: [id])
+  items       QuoteItem[]
+  sale        Sale?
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id         String  @id @default(cuid())
+  quoteId    String  @map("quote_id")
+  productId  String  @map("product_id")
+  quantity   Int
+  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
+  finalPrice Decimal @map("final_price") @db.Decimal(10, 2)
+
+  quote   Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("quote_items")
+}
+
+// ─── Sales ────────────────────────────────────────────────────────────────────
+
+model Sale {
+  id            String        @id @default(cuid())
+  quoteId       String        @unique @map("quote_id")
+  customerId    String        @map("customer_id")
+  paymentMethod PaymentMethod @map("payment_method")
+  subtotal      Decimal       @db.Decimal(10, 2)
+  freight       Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  quote    Quote      @relation(fields: [quoteId], references: [id])
+  customer Customer   @relation(fields: [customerId], references: [id])
+  items    SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String  @map("sale_id")
+  productId String  @map("product_id")
+  quantity  Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+// ─── Pending Orders ───────────────────────────────────────────────────────────
+
+model PendingOrder {
+  id         String             @id @default(cuid())
+  customerId String             @map("customer_id")
+  productId  String             @map("product_id")
+  quoteId    String?            @map("quote_id")
+  quantity   Int
+  fulfilled  Int                @default(0)
+  status     PendingOrderStatus @default(WAITING)
+  notes      String?
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@map("pending_orders")
+}
+
+// ─── Timeline Events ──────────────────────────────────────────────────────────
+
+model TimelineEvent {
+  id          String             @id @default(cuid())
+  entityType  TimelineEntityType @map("entity_type")
+  entityId    String             @map("entity_id")
+  action      String
+  description String?
+  metadata    Json?
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  @@map("timeline_events")
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+model Settings {
+  id                    String   @id @default(cuid())
+  companyName           String   @default("Angra Drywall") @map("company_name")
+  companyCnpj           String?  @map("company_cnpj")
+  companyEmail          String?  @map("company_email")
+  companyPhone          String?  @map("company_phone")
+  companyAddress        String?  @map("company_address")
+  signatureText         String?  @map("signature_text")
+  quoteExpirationDays   Int      @default(3) @map("quote_expiration_days")
+  creditFeePercent      Decimal  @default(4.99) @map("credit_fee_percent") @db.Decimal(5, 2)
+  debitFeePercent       Decimal  @default(1.99) @map("debit_fee_percent") @db.Decimal(5, 2)
+  installmentFeePercent Decimal  @default(12.71) @map("installment_fee_percent") @db.Decimal(5, 2)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
