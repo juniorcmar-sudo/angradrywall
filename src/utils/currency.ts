@@ -10,20 +10,20 @@ export function parseCurrency(value: string): number {
   return parseFloat(value.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
 }
 
-export const PAYMENT_FEES: Record<string, number> = {
-  PIX: 0,
-  CASH: 0,
-  DEBIT: 1.99,
-  CREDIT: 4.99,
-  LINK_3X: 12.71,
-};
-
+/**
+ * DEBIT and LINK_3X apply automatic % fee from Settings.
+ * PIX and CASH have no fee.
+ * CREDIT (legacy) treated as base price.
+ */
 export function calculatePriceWithFee(
   basePrice: number,
-  paymentMethod: string
+  paymentMethod: string,
+  debitFeePercent: number = 1.99,
+  linkFeePercent: number = 12.71
 ): number {
-  const fee = PAYMENT_FEES[paymentMethod] ?? 0;
-  return basePrice * (1 + fee / 100);
+  if (paymentMethod === "DEBIT") return basePrice * (1 + debitFeePercent / 100);
+  if (paymentMethod === "LINK_3X") return basePrice * (1 + linkFeePercent / 100);
+  return basePrice;
 }
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -31,5 +31,5 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Dinheiro",
   DEBIT: "Débito",
   CREDIT: "Crédito",
-  LINK_3X: "Maquininha",
+  LINK_3X: "Link de Pagamento",
 };

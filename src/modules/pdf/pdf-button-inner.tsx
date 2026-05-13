@@ -4,9 +4,15 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { QuotePDF } from "./quote-pdf";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2 } from "lucide-react";
-import type { QuotePDFProps } from "./quote-pdf";
+import type { QuotePDFProps, CreditInstallmentProp } from "./quote-pdf";
 
-type Props = Omit<QuotePDFProps, "logoUrl"> & { fileName: string; logoUrl: string };
+type Props = Omit<QuotePDFProps, "logoUrl"> & {
+  fileName: string;
+  logoUrl: string;
+  debitFeePercent?: number;
+  linkFeePercent?: number;
+  creditInstallments?: CreditInstallmentProp[];
+};
 
 export function PDFButtonInner({
   quote,
@@ -18,6 +24,9 @@ export function PDFButtonInner({
   signatureText,
   logoUrl,
   fileName,
+  debitFeePercent,
+  linkFeePercent,
+  creditInstallments,
 }: Props) {
   return (
     <PDFDownloadLink
@@ -31,7 +40,9 @@ export function PDFButtonInner({
           companyEmail={companyEmail}
           signatureText={signatureText}
           logoUrl={logoUrl}
-          // installments comes through quote.installments already
+          debitFeePercent={debitFeePercent}
+          linkFeePercent={linkFeePercent}
+          creditInstallments={creditInstallments}
         />
       }
       fileName={fileName}

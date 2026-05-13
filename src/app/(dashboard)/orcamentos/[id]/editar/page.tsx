@@ -38,6 +38,8 @@ export default async function EditarOrcamentoPage({
           freightZones={freightZones}
           companyAddress={settings?.companyAddress}
           initialQuote={quote}
+          debitFeePercent={settings?.debitFeePercent ? Number(settings.debitFeePercent) : 1.99}
+          linkFeePercent={settings?.installmentFeePercent ? Number(settings.installmentFeePercent) : 12.71}
         />
       </div>
     </div>

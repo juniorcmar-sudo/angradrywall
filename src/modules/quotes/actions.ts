@@ -13,10 +13,16 @@ const quoteItemSchema = z.object({
   finalPrice: z.coerce.number().min(0),
 });
 
+const creditInstallmentSchema = z.object({
+  installments: z.coerce.number().int().min(1),
+  value: z.coerce.number().min(0),
+});
+
 const quoteSchema = z.object({
   customerId: z.string().min(1, "Selecione um cliente"),
   paymentMethod: z.enum(["PIX", "CASH", "DEBIT", "CREDIT", "LINK_3X"]).optional().nullable(),
-  installments: z.coerce.number().int().min(1).max(12).optional().nullable(),
+  installments: z.number().int().min(1).max(24).optional().nullable(),
+  installmentValue: z.number().min(0).optional().nullable(),
   freightType: z.string().default("DELIVERY"),
   freightZoneId: z.string().optional(),
   freightValue: z.coerce.number().min(0).default(0),
@@ -24,6 +30,7 @@ const quoteSchema = z.object({
   internalNotes: z.string().optional(),
   customerNotes: z.string().optional(),
   items: z.array(quoteItemSchema).min(1, "Adicione pelo menos um produto"),
+  creditInstallments: z.array(creditInstallmentSchema).optional().default([]),
 });
 
 export async function createQuote(
@@ -34,14 +41,14 @@ export async function createQuote(
     return { success: false, error: parsed.error.issues[0].message };
   }
 
-  const { items, freightZoneId, ...quoteData } = parsed.data;
+  const { items, freightZoneId, creditInstallments, ...quoteData } = parsed.data;
 
   const subtotal = items.reduce(
     (sum, item) => sum + item.finalPrice * item.quantity,
     0
   );
-  const finalTotal =
-    subtotal + quoteData.freightValue - quoteData.discount;
+
+  const finalTotal = subtotal + quoteData.freightValue - quoteData.discount;
 
   try {
     const settings = await prisma.settings.findFirst();
@@ -62,6 +69,15 @@ export async function createQuote(
             finalPrice: item.finalPrice * item.quantity,
           })),
         },
+        creditInstallments: creditInstallments && creditInstallments.length > 0
+          ? {
+              create: creditInstallments.map((ci, i) => ({
+                installments: ci.installments,
+                value: ci.value,
+                sortOrder: i,
+              })),
+            }
+          : undefined,
       },
     });
 
@@ -219,13 +235,14 @@ export async function updateQuote(
     return { success: false, error: "Apenas rascunhos ou enviados podem ser editados" };
   }
 
-  const { items, freightZoneId, ...quoteData } = parsed.data;
+  const { items, freightZoneId, creditInstallments, ...quoteData } = parsed.data;
   const subtotal = items.reduce((sum, item) => sum + item.finalPrice * item.quantity, 0);
   const finalTotal = subtotal + quoteData.freightValue - quoteData.discount;
 
   try {
     await prisma.$transaction(async (tx) => {
       await tx.quoteItem.deleteMany({ where: { quoteId: id } });
+      await tx.quoteCreditInstallment.deleteMany({ where: { quoteId: id } });
       await tx.quote.update({
         where: { id },
         data: {
@@ -241,6 +258,15 @@ export async function updateQuote(
               finalPrice: item.finalPrice * item.quantity,
             })),
           },
+          creditInstallments: creditInstallments && creditInstallments.length > 0
+            ? {
+                create: creditInstallments.map((ci, i) => ({
+                  installments: ci.installments,
+                  value: ci.value,
+                  sortOrder: i,
+                })),
+              }
+            : undefined,
         },
       });
     });
@@ -254,10 +280,66 @@ export async function updateQuote(
 
 export async function updateQuotePaymentMethod(
   id: string,
-  paymentMethod: "PIX" | "CASH" | "DEBIT" | "CREDIT" | "LINK_3X"
+  paymentMethod: "PIX" | "CASH" | "DEBIT" | "CREDIT" | "LINK_3X",
+  installments?: number | null,
+  installmentValue?: number | null
 ): Promise<ActionResult<void>> {
   try {
-    await prisma.quote.update({ where: { id }, data: { paymentMethod } });
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!quote) return { success: false, error: "Orçamento não encontrado" };
+
+    const settings = await prisma.settings.findFirst();
+    const debitFeePercent = Number(settings?.debitFeePercent?.toString() ?? "1.99");
+    const linkFeePercent = Number(settings?.installmentFeePercent?.toString() ?? "12.71");
+    const freightValue = Number(quote.freightValue.toString());
+    const discount = Number(quote.discount.toString());
+
+    // Recalculate subtotal from base item prices (unitPrice)
+    const baseSubtotal = quote.items.reduce(
+      (sum, item) => sum + Number(item.unitPrice.toString()) * item.quantity,
+      0
+    );
+
+    let newSubtotal: number;
+    let newFinalTotal: number;
+
+    if (paymentMethod === "DEBIT") {
+      newSubtotal = baseSubtotal * (1 + debitFeePercent / 100);
+      newFinalTotal = newSubtotal + freightValue - discount;
+    } else if (paymentMethod === "LINK_3X") {
+      newSubtotal = baseSubtotal * (1 + linkFeePercent / 100);
+      newFinalTotal = newSubtotal + freightValue - discount;
+    } else if (paymentMethod === "CREDIT" && installments && installments > 0 && installmentValue && installmentValue > 0) {
+      // Credit with chosen installment plan: total = installmentValue * installments
+      newSubtotal = installmentValue * installments;
+      newFinalTotal = newSubtotal + freightValue - discount;
+    } else {
+      // PIX, CASH, CREDIT (no plan chosen yet) → base price
+      newSubtotal = baseSubtotal;
+      newFinalTotal = baseSubtotal + freightValue - discount;
+    }
+
+    // Compute installmentValue to store
+    let computedInstallmentValue: number | null = null;
+    if (paymentMethod === "LINK_3X" && installments && installments > 0) {
+      computedInstallmentValue = newFinalTotal / installments;
+    } else if (paymentMethod === "CREDIT" && installmentValue && installmentValue > 0) {
+      computedInstallmentValue = installmentValue;
+    }
+
+    await prisma.quote.update({
+      where: { id },
+      data: {
+        paymentMethod,
+        installments: installments ?? null,
+        installmentValue: computedInstallmentValue,
+        subtotal: newSubtotal,
+        finalTotal: newFinalTotal,
+      },
+    });
     revalidatePath(`/orcamentos/${id}`);
     revalidatePath("/orcamentos");
     return { success: true, data: undefined };
@@ -270,7 +352,7 @@ export async function duplicateQuote(id: string): Promise<ActionResult<{ id: str
   try {
     const original = await prisma.quote.findUnique({
       where: { id },
-      include: { items: true },
+      include: { items: true, creditInstallments: true },
     });
     if (!original) return { success: false, error: "Orçamento não encontrado" };
 
@@ -282,6 +364,8 @@ export async function duplicateQuote(id: string): Promise<ActionResult<{ id: str
         customerId: original.customerId,
         status: "DRAFT",
         paymentMethod: original.paymentMethod,
+        installments: original.installments,
+        installmentValue: original.installmentValue,
         freightZoneId: original.freightZoneId,
         freightValue: original.freightValue,
         subtotal: original.subtotal,
@@ -298,6 +382,15 @@ export async function duplicateQuote(id: string): Promise<ActionResult<{ id: str
             finalPrice: item.finalPrice,
           })),
         },
+        creditInstallments: original.creditInstallments.length > 0
+          ? {
+              create: original.creditInstallments.map((ci) => ({
+                installments: ci.installments,
+                value: ci.value,
+                sortOrder: ci.sortOrder,
+              })),
+            }
+          : undefined,
       },
     });
 
@@ -327,6 +420,7 @@ export async function getQuoteById(id: string) {
       customer: true,
       freightZone: true,
       items: { include: { product: { include: { category: true } } } },
+      creditInstallments: { orderBy: { sortOrder: "asc" } },
     },
   });
 }

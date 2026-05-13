@@ -31,11 +31,11 @@ import {
   MapPin,
   Package,
   Truck,
+  CreditCard,
 } from "lucide-react";
 import {
   formatCurrency,
   calculatePriceWithFee,
-  PAYMENT_FEES,
   PAYMENT_METHOD_LABELS,
 } from "@/utils/currency";
 import type { Customer, Product, FreightZone, QuoteWithDetails } from "@/types";
@@ -44,6 +44,7 @@ const schema = z.object({
   customerId: z.string().min(1, "Selecione um cliente"),
   paymentMethod: z.enum(["PIX", "CASH", "DEBIT", "CREDIT", "LINK_3X"]).optional().nullable(),
   installments: z.number().int().min(1).max(12).optional().nullable(),
+  installmentValue: z.number().min(0).optional().nullable(),
   freightType: z.string(),
   freightZoneId: z.string().optional(),
   freightValue: z.number().min(0),
@@ -72,24 +73,36 @@ interface QuoteItem {
   finalPrice: number;
 }
 
+interface CreditInstallmentEntry {
+  installments: number;
+  value: number;
+}
+
 interface QuoteBuilderProps {
   customers: Customer[];
   products: Product[];
   freightZones: FreightZone[];
   companyAddress?: string | null;
   initialQuote?: QuoteWithDetails;
+  debitFeePercent?: number;
+  linkFeePercent?: number;
 }
 
 const newCustomerSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
   type: z.enum(["COMMON", "DRYWALL_WORKER"]),
   phone1: z.string().min(8, "Telefone obrigatório"),
+  phone2: z.string().optional(),
+  razaoSocial: z.string().optional(),
+  cpfCnpj: z.string().optional(),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
   cep: z.string().optional(),
   rua: z.string().optional(),
   numero: z.string().optional(),
   bairro: z.string().optional(),
   cidade: z.string().optional(),
   uf: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type NewCustomerData = z.infer<typeof newCustomerSchema>;
@@ -100,6 +113,8 @@ export function QuoteBuilder({
   freightZones,
   companyAddress,
   initialQuote,
+  debitFeePercent = 1.99,
+  linkFeePercent = 12.71,
 }: QuoteBuilderProps) {
   const router = useRouter();
   const isEditing = !!initialQuote;
@@ -142,12 +157,17 @@ export function QuoteBuilder({
     name: "",
     type: "COMMON",
     phone1: "",
+    phone2: "",
+    razaoSocial: "",
+    cpfCnpj: "",
+    email: "",
     cep: "",
     rua: "",
     numero: "",
     bairro: "",
     cidade: "",
     uf: "",
+    notes: "",
   });
   const [newCustomerErrors, setNewCustomerErrors] = useState<Partial<Record<keyof NewCustomerData, string>>>({});
 
@@ -155,6 +175,20 @@ export function QuoteBuilder({
   const [installments, setInstallments] = useState<number>(
     initialQuote?.installments ?? 1
   );
+  const [installmentValue, setInstallmentValue] = useState<number>(
+    initialQuote?.installmentValue ? Number(initialQuote.installmentValue.toString()) : 0
+  );
+
+  // Credit manual installments
+  const [creditInstallments, setCreditInstallments] = useState<CreditInstallmentEntry[]>(
+    initialQuote?.creditInstallments?.map((ci) => ({
+      installments: ci.installments,
+      value: Number(ci.value.toString()),
+    })) ?? []
+  );
+  const [showAddCredit, setShowAddCredit] = useState(false);
+  const [newCreditInstallments, setNewCreditInstallments] = useState<number>(1);
+  const [newCreditValue, setNewCreditValue] = useState<number | "">("");
 
   const [freightMode, setFreightMode] = useState<"none" | "pickup" | "delivery">(initFreightMode);
   const [freightValue, setFreightValue] = useState(initFreightValue);
@@ -267,7 +301,7 @@ export function QuoteBuilder({
     setAllCustomers((prev) => [created, ...prev]);
     selectCustomer(created);
     setShowNewForm(false);
-    setNewCustomer({ name: "", type: "COMMON", phone1: "", cep: "", rua: "", numero: "", bairro: "", cidade: "", uf: "" });
+    setNewCustomer({ name: "", type: "COMMON", phone1: "", phone2: "", razaoSocial: "", cpfCnpj: "", email: "", cep: "", rua: "", numero: "", bairro: "", cidade: "", uf: "", notes: "" });
     toast.success("Cliente criado e selecionado!");
   }
 
@@ -292,7 +326,9 @@ export function QuoteBuilder({
       return;
     }
     const base = getBasePrice(product, selectedCustomer);
-    const finalPrice = paymentMethod ? calculatePriceWithFee(base, paymentMethod) : base;
+    const finalPrice = paymentMethod
+      ? calculatePriceWithFee(base, paymentMethod, debitFeePercent, linkFeePercent)
+      : base;
     const updated = [
       ...items,
       { productId: product.id, productName: product.name, quantity: 1, unitPrice: base, finalPrice },
@@ -335,7 +371,9 @@ export function QuoteBuilder({
       const product = products.find((p) => p.id === item.productId);
       if (!product) return item;
       const base = getBasePrice(product, cust);
-      const finalPrice = method ? calculatePriceWithFee(base, method) : base;
+      const finalPrice = method
+        ? calculatePriceWithFee(base, method, debitFeePercent, linkFeePercent)
+        : base;
       return { ...item, unitPrice: base, finalPrice };
     });
     setItems(updated);
@@ -344,15 +382,20 @@ export function QuoteBuilder({
 
   function handlePaymentChange(method: string) {
     if (paymentMethod === method) {
+      // deselect
       setPaymentMethod(null);
       setValue("paymentMethod", null);
       recalculatePrices(null);
       setInstallments(1);
+      setInstallmentValue(0);
     } else {
       setPaymentMethod(method);
       setValue("paymentMethod", method as NonNullable<FormData["paymentMethod"]>);
       recalculatePrices(method);
-      if (method !== "LINK_3X") setInstallments(1);
+      if (method !== "LINK_3X") {
+        setInstallments(1);
+        setInstallmentValue(0);
+      }
     }
   }
 
@@ -391,8 +434,14 @@ export function QuoteBuilder({
 
   const subtotal = items.reduce((sum, i) => sum + i.finalPrice * i.quantity, 0);
   const baseSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+  const isInstallmentPayment = paymentMethod === "LINK_3X";
   const finalTotal = subtotal + freightValue - discount;
   const pixTotal = baseSubtotal + freightValue - discount;
+  // Auto-calculated installment value (read-only — derived from finalTotal)
+  const autoInstallmentValue =
+    isInstallmentPayment && installments > 0 && finalTotal > 0
+      ? finalTotal / installments
+      : 0;
 
   async function onSubmit(data: FormData) {
     if (items.length === 0) {
@@ -400,9 +449,17 @@ export function QuoteBuilder({
       return;
     }
     setIsSubmitting(true);
-    const installmentsVal = paymentMethod === "LINK_3X" ? installments : null;
+    const installmentsVal = isInstallmentPayment ? installments : null;
+    const installmentValueVal = isInstallmentPayment && autoInstallmentValue > 0 ? autoInstallmentValue : null;
+    const creditInstallmentsVal = creditInstallments; // always sent regardless of payment method
     if (isEditing && initialQuote) {
-      const result = await updateQuote(initialQuote.id, { ...data, items, installments: installmentsVal });
+      const result = await updateQuote(initialQuote.id, {
+        ...data,
+        items,
+        installments: installmentsVal,
+        installmentValue: installmentValueVal,
+        creditInstallments: creditInstallmentsVal,
+      });
       setIsSubmitting(false);
       if (!result.success) {
         toast.error(result.error);
@@ -411,7 +468,13 @@ export function QuoteBuilder({
       toast.success("Orçamento atualizado!");
       router.push(`/orcamentos/${initialQuote.id}`);
     } else {
-      const result = await createQuote({ ...data, items, installments: installmentsVal });
+      const result = await createQuote({
+        ...data,
+        items,
+        installments: installmentsVal,
+        installmentValue: installmentValueVal,
+        creditInstallments: creditInstallmentsVal,
+      });
       setIsSubmitting(false);
       if (!result.success) {
         toast.error(result.error);
@@ -423,7 +486,7 @@ export function QuoteBuilder({
   }
 
   const primaryMethods = ["PIX", "CASH"] as const;
-  const secondaryMethods = ["DEBIT", "CREDIT", "LINK_3X"] as const;
+  const secondaryMethods = ["DEBIT", "LINK_3X"] as const;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -523,8 +586,9 @@ export function QuoteBuilder({
 
               {/* Inline new customer form */}
               {showNewForm && (
-                <div className="border border-border rounded-md p-4 space-y-3 bg-muted/30">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="border border-border rounded-md bg-muted/30 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <p className="text-sm font-semibold">Novo Cliente</p>
                     <button
                       type="button"
@@ -535,130 +599,200 @@ export function QuoteBuilder({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Nome *</Label>
-                      <Input
-                        placeholder="Nome completo"
-                        value={newCustomer.name}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                      {newCustomerErrors.name && (
-                        <p className="text-xs text-destructive">{newCustomerErrors.name}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">Tipo *</Label>
-                      <Select
-                        value={newCustomer.type}
-                        onValueChange={(v) => setNewCustomer((p) => ({ ...p, type: v as "COMMON" | "DRYWALL_WORKER" }))}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="COMMON">Comum</SelectItem>
-                          <SelectItem value="DRYWALL_WORKER">Gesseiro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">Telefone *</Label>
-                      <Input
-                        placeholder="(22) 99999-9999"
-                        value={newCustomer.phone1}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, phone1: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                      {newCustomerErrors.phone1 && (
-                        <p className="text-xs text-destructive">{newCustomerErrors.phone1}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-xs">CEP</Label>
-                      <div className="relative">
+                  {/* Scrollable fields */}
+                  <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
+                    {/* Obrigatórios */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Nome *</Label>
                         <Input
-                          placeholder="00000-000"
-                          value={newCustomer.cep}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setNewCustomer((p) => ({ ...p, cep: v }));
-                            if (v.replace(/\D/g, "").length === 8) lookupCep(v);
-                          }}
+                          placeholder="Nome completo"
+                          value={newCustomer.name}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
                           className="h-8 text-sm"
                         />
-                        {fetchingCep && (
-                          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-muted-foreground" />
+                        {newCustomerErrors.name && (
+                          <p className="text-xs text-destructive">{newCustomerErrors.name}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tipo *</Label>
+                        <Select
+                          value={newCustomer.type}
+                          onValueChange={(v) => setNewCustomer((p) => ({ ...p, type: v as "COMMON" | "DRYWALL_WORKER" }))}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="COMMON">Comum</SelectItem>
+                            <SelectItem value="DRYWALL_WORKER">Gesseiro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Telefone *</Label>
+                        <Input
+                          placeholder="(22) 99999-9999"
+                          value={newCustomer.phone1}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, phone1: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                        {newCustomerErrors.phone1 && (
+                          <p className="text-xs text-destructive">{newCustomerErrors.phone1}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Telefone 2</Label>
+                        <Input
+                          placeholder="(22) 99999-9999"
+                          value={newCustomer.phone2}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, phone2: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dados opcionais */}
+                    <p className="text-xs text-muted-foreground pt-1 font-medium">Dados adicionais (opcional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Razão Social</Label>
+                        <Input
+                          placeholder="Empresa Ltda"
+                          value={newCustomer.razaoSocial}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, razaoSocial: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">CPF / CNPJ</Label>
+                        <Input
+                          placeholder="000.000.000-00"
+                          value={newCustomer.cpfCnpj}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, cpfCnpj: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Email</Label>
+                        <Input
+                          type="email"
+                          placeholder="cliente@email.com"
+                          value={newCustomer.email}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, email: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                        {newCustomerErrors.email && (
+                          <p className="text-xs text-destructive">{newCustomerErrors.email}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Rua</Label>
-                      <Input
-                        placeholder="Rua"
-                        value={newCustomer.rua}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, rua: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                    {/* Endereço */}
+                    <p className="text-xs text-muted-foreground pt-1 font-medium">Endereço (opcional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">CEP</Label>
+                        <div className="relative">
+                          <Input
+                            placeholder="00000-000"
+                            value={newCustomer.cep}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setNewCustomer((p) => ({ ...p, cep: v }));
+                              if (v.replace(/\D/g, "").length === 8) lookupCep(v);
+                            }}
+                            className="h-8 text-sm"
+                          />
+                          {fetchingCep && (
+                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Número</Label>
-                      <Input
-                        placeholder="Nº"
-                        value={newCustomer.numero}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, numero: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Número</Label>
+                        <Input
+                          placeholder="Nº"
+                          value={newCustomer.numero}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, numero: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Bairro</Label>
-                      <Input
-                        placeholder="Bairro"
-                        value={newCustomer.bairro}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, bairro: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Rua</Label>
+                        <Input
+                          placeholder="Rua"
+                          value={newCustomer.rua}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, rua: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">Cidade</Label>
-                      <Input
-                        placeholder="Cidade"
-                        value={newCustomer.cidade}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, cidade: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Bairro</Label>
+                        <Input
+                          placeholder="Bairro"
+                          value={newCustomer.bairro}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, bairro: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-xs">UF</Label>
-                      <Input
-                        placeholder="RJ"
-                        maxLength={2}
-                        value={newCustomer.uf}
-                        onChange={(e) => setNewCustomer((p) => ({ ...p, uf: e.target.value.toUpperCase() }))}
-                        className="h-8 text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cidade</Label>
+                        <Input
+                          placeholder="Cidade"
+                          value={newCustomer.cidade}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, cidade: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">UF</Label>
+                        <Input
+                          placeholder="RJ"
+                          maxLength={2}
+                          value={newCustomer.uf}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, uf: e.target.value.toUpperCase() }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Observações</Label>
+                        <Textarea
+                          placeholder="Anotações internas sobre o cliente..."
+                          rows={2}
+                          value={newCustomer.notes}
+                          onChange={(e) => setNewCustomer((p) => ({ ...p, notes: e.target.value }))}
+                          className="text-sm resize-none"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full"
-                    onClick={saveNewCustomer}
-                    disabled={savingNewCustomer}
-                  >
-                    {savingNewCustomer && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-                    Salvar e Selecionar Cliente
-                  </Button>
+                  {/* Sticky save button */}
+                  <div className="px-4 py-3 border-t border-border bg-muted/50">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={saveNewCustomer}
+                      disabled={savingNewCustomer}
+                    >
+                      {savingNewCustomer && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+                      Salvar e Selecionar Cliente
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -707,55 +841,157 @@ export function QuoteBuilder({
                 ))}
               </div>
 
-              {/* Secondary methods */}
-              <div className="grid grid-cols-3 gap-2">
-                {secondaryMethods.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handlePaymentChange(key)}
-                    className={`p-2.5 rounded-md border text-sm font-medium transition-colors ${
-                      paymentMethod === key
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <div>{PAYMENT_METHOD_LABELS[key]}</div>
-                    <div className="text-xs opacity-70 mt-0.5">+{PAYMENT_FEES[key]}%</div>
-                  </button>
-                ))}
+              {/* Secondary methods — Débito e Link de Pagamento */}
+              <div className="grid grid-cols-2 gap-2">
+                {secondaryMethods.map((key) => {
+                  const feeLabel =
+                    key === "DEBIT" ? `+${debitFeePercent}%`
+                    : `+${linkFeePercent}%`;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handlePaymentChange(key)}
+                      className={`p-3 rounded-md border text-sm font-medium transition-colors text-left ${
+                        paymentMethod === key
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="font-semibold">{PAYMENT_METHOD_LABELS[key]}</div>
+                      <div className="text-xs opacity-70 mt-0.5">{feeLabel}</div>
+                      {paymentMethod === key && items.length > 0 && (
+                        <div className="text-xs font-bold mt-1">
+                          {formatCurrency(finalTotal)}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Installments picker — only for Maquininha */}
-              {paymentMethod === "LINK_3X" && (
-                <div className="pt-1 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Número de parcelas</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {[1, 2, 3, 6, 12].map((n) => {
-                      const perInstallment = finalTotal > 0 && n > 1 ? finalTotal / n : null;
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setInstallments(n)}
-                          className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors min-w-[56px] text-center ${
-                            installments === n
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
-                          }`}
-                        >
-                          <div>{n === 1 ? "à vista" : `${n}x`}</div>
-                          {perInstallment && n > 1 && (
-                            <div className="text-[10px] opacity-70">
-                              {formatCurrency(perInstallment)}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+              {/* Parcelamento — apenas para Link de Pagamento */}
+              {isInstallmentPayment && (
+                <div className="border border-border rounded-md p-3 bg-muted/20 space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">Parcelamento (Link de Pagamento)</p>
+                  <div className="flex items-center gap-3">
+                    <div className="space-y-1 flex-1">
+                      <label className="text-xs text-muted-foreground">Número de parcelas</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="24"
+                        placeholder="Ex: 3"
+                        value={installments === 1 ? "" : installments}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10);
+                          setInstallments(isNaN(v) || v < 1 ? 1 : v);
+                        }}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <label className="text-xs text-muted-foreground">Valor por parcela</label>
+                      <div className="h-8 flex items-center px-3 rounded-md border border-border bg-muted/50 text-sm font-medium text-primary">
+                        {autoInstallmentValue > 0 ? formatCurrency(autoInstallmentValue) : "—"}
+                      </div>
+                    </div>
                   </div>
+                  {autoInstallmentValue > 0 && installments > 1 && (
+                    <p className="text-sm font-semibold text-primary">
+                      {installments}x de {formatCurrency(autoInstallmentValue)} = {formatCurrency(finalTotal)}
+                    </p>
+                  )}
                 </div>
               )}
+
+              {/* Parcelas de Crédito (maquininha) — sempre disponível, opcional */}
+              <div className="border border-border rounded-md p-3 bg-muted/20 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <CreditCard className="w-3 h-3" />
+                  Crédito / Maquininha
+                  <span className="font-normal">(opcional — aparece no PDF)</span>
+                </p>
+
+                {creditInstallments.length > 0 && (
+                  <div className="space-y-1">
+                    {creditInstallments.map((ci, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm bg-background rounded px-2 py-1 border border-border">
+                        <span>
+                          {ci.installments === 1 ? "À vista" : `${ci.installments}x`}
+                          {" de "}
+                          <span className="font-semibold">{formatCurrency(ci.value)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCreditInstallments((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-muted-foreground hover:text-destructive ml-2"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showAddCredit ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Parcelas"
+                      value={newCreditInstallments}
+                      onChange={(e) => setNewCreditInstallments(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="h-8 text-sm w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">×</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Valor R$"
+                      value={newCreditValue}
+                      onChange={(e) => setNewCreditValue(e.target.value === "" ? "" : Number(e.target.value))}
+                      className="h-8 text-sm flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => {
+                        if (newCreditValue !== "" && newCreditValue > 0) {
+                          setCreditInstallments((prev) => [...prev, { installments: newCreditInstallments, value: Number(newCreditValue) }]);
+                          setNewCreditInstallments(1);
+                          setNewCreditValue("");
+                          setShowAddCredit(false);
+                        }
+                      }}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2"
+                      onClick={() => { setShowAddCredit(false); setNewCreditValue(""); setNewCreditInstallments(1); }}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs w-full"
+                    onClick={() => setShowAddCredit(true)}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Adicionar Parcela
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -782,7 +1018,9 @@ export function QuoteBuilder({
                   ) : (
                     filteredProducts.slice(0, 8).map((p) => {
                       const base = getBasePrice(p, selectedCustomer);
-                      const priceWithFee = paymentMethod ? calculatePriceWithFee(base, paymentMethod) : base;
+                      const priceWithFee = paymentMethod
+                        ? calculatePriceWithFee(base, paymentMethod, debitFeePercent, linkFeePercent)
+                        : base;
                       return (
                         <button
                           key={p.id}
@@ -1004,6 +1242,11 @@ export function QuoteBuilder({
                 {paymentMethod && !["PIX", "CASH"].includes(paymentMethod) && items.length > 0 && (
                   <div className="text-xs text-muted-foreground text-right">
                     À vista (Pix): {formatCurrency(pixTotal)}
+                  </div>
+                )}
+                {isInstallmentPayment && autoInstallmentValue > 0 && installments > 1 && (
+                  <div className="text-xs text-primary font-medium text-right">
+                    {installments}x de {formatCurrency(autoInstallmentValue)}
                   </div>
                 )}
                 {!paymentMethod && items.length > 0 && (

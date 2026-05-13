@@ -15,21 +15,6 @@ const GRAY = "#e8e8e8";
 const BORDER = "#cccccc";
 const TEXT = "#000000";
 
-const PDF_FEES: Record<string, number> = {
-  PIX: 0,
-  CASH: 0,
-  DEBIT: 1.99,
-  CREDIT: 4.99,
-  LINK_3X: 12.71,
-};
-const PDF_LABELS: Record<string, string> = {
-  PIX: "Pix",
-  CASH: "Dinheiro",
-  DEBIT: "Débito",
-  CREDIT: "Crédito",
-  LINK_3X: "Maquininha",
-};
-
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
@@ -223,6 +208,13 @@ const styles = StyleSheet.create({
     padding: "4 0",
     backgroundColor: "#f5f5f5",
   },
+  paymentSubHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f0f0f0",
+    border: `1px solid ${BORDER}`,
+    borderTop: "0px",
+    padding: "3 6",
+  },
   payColDate: { width: 70, paddingHorizontal: 6 },
   payColValue: { width: 80, paddingHorizontal: 6, textAlign: "right" },
   payColMethod: { flex: 1, paddingHorizontal: 6 },
@@ -264,11 +256,17 @@ function fmt(value: number): string {
   return `R$ ${value.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 }
 
+export interface CreditInstallmentProp {
+  installments: number;
+  value: number;
+}
+
 export interface QuotePDFProps {
   quote: {
     number: number;
     paymentMethod: string | null;
     installments?: number | null;
+    installmentValue?: { toString(): string } | null;
     freightValue: { toString(): string };
     discount: { toString(): string };
     subtotal: { toString(): string };
@@ -306,6 +304,9 @@ export interface QuotePDFProps {
   companyEmail?: string;
   signatureText?: string;
   logoUrl?: string;
+  debitFeePercent?: number;
+  linkFeePercent?: number;
+  creditInstallments?: CreditInstallmentProp[];
 }
 
 export function QuotePDF({
@@ -317,6 +318,9 @@ export function QuotePDF({
   companyEmail,
   signatureText,
   logoUrl,
+  debitFeePercent = 1.99,
+  linkFeePercent = 12.71,
+  creditInstallments = [],
 }: QuotePDFProps) {
   const freight = Number(quote.freightValue.toString());
   const discount = Number(quote.discount.toString());
@@ -342,46 +346,129 @@ export function QuotePDF({
     .filter(Boolean)
     .join(" / ");
 
-  // Payment rows: one or multiple
-  type PayRow = { date: string; value: number; method: string; bold: boolean; sub?: string };
+  // Build payment rows
+  type PayRow = {
+    date: string;
+    value: number;
+    method: string;
+    bold: boolean;
+    isSubHeader?: boolean;
+    subHeaderLabel?: string;
+  };
+
   const paymentRows: PayRow[] = [];
+
   if (quote.paymentMethod) {
-    const inst = quote.installments ?? 1;
-    const methodLabel = PDF_LABELS[quote.paymentMethod] ?? quote.paymentMethod;
-    const installLabel =
-      quote.paymentMethod === "LINK_3X" && inst > 1
-        ? `${methodLabel} — ${inst}x de ${fmt(total / inst)}`
-        : methodLabel;
-    paymentRows.push({
-      date: validStr,
-      value: total,
-      method: installLabel,
-      bold: false,
-    });
-  } else {
-    const methods = [
-      { key: "PIX", label: "Pix / Dinheiro", fee: 0, bold: true },
-      { key: "DEBIT", label: PDF_LABELS.DEBIT, fee: PDF_FEES.DEBIT, bold: false },
-      { key: "CREDIT", label: PDF_LABELS.CREDIT, fee: PDF_FEES.CREDIT, bold: false },
-      { key: "LINK_3X", label: PDF_LABELS.LINK_3X, fee: PDF_FEES.LINK_3X, bold: false },
-    ];
-    methods.forEach(({ key, label, fee, bold }) => {
-      const subtotalWithFee = baseSubtotal * (1 + fee / 100);
+    // Single confirmed payment method
+    const method = quote.paymentMethod;
+
+    if (method === "LINK_3X") {
+      // Show à vista + 2x + 3x + 4x + 5x + 6x auto-calculated
+      const subtotalWithFee = baseSubtotal * (1 + linkFeePercent / 100);
       const rowTotal = subtotalWithFee + freight - discount;
-      if (key === "LINK_3X") {
-        // Show installment simulation: 2x, 3x, 6x, 12x
-        [2, 3, 6, 12].forEach((n) => {
+      const inst = quote.installments;
+      if (inst && inst > 1) {
+        // Only show the confirmed installment choice, bolded
+        paymentRows.push({
+          date: validStr,
+          value: rowTotal,
+          method: `Link de Pagamento — ${inst}x de ${fmt(rowTotal / inst)}`,
+          bold: true,
+        });
+      } else {
+        // À vista
+        paymentRows.push({
+          date: validStr,
+          value: rowTotal,
+          method: "Link de Pagamento — À vista",
+          bold: true,
+        });
+      }
+    } else if (method === "CREDIT") {
+      if (quote.installments && quote.installmentValue) {
+        // Confirmed credit installment
+        const confirmedTotal = Number(quote.installmentValue.toString()) * quote.installments;
+        const n = quote.installments;
+        const v = Number(quote.installmentValue.toString());
+        paymentRows.push({
+          date: validStr,
+          value: confirmedTotal + freight - discount,
+          method: n === 1
+            ? "Crédito (Maquininha) — À vista"
+            : `Crédito (Maquininha) — ${n}x de ${fmt(v)}`,
+          bold: true,
+        });
+      } else if (creditInstallments.length > 0) {
+        // Show manual credit options
+        creditInstallments.forEach((ci) => {
           paymentRows.push({
             date: validStr,
-            value: rowTotal,
-            method: `${label} — ${n}x de ${fmt(rowTotal / n)}`,
-            bold,
+            value: ci.value * ci.installments + freight - discount,
+            method: ci.installments === 1
+              ? "Crédito (Maquininha) — À vista"
+              : `Crédito (Maquininha) — ${ci.installments}x de ${fmt(ci.value)}`,
+            bold: false,
           });
         });
       } else {
-        paymentRows.push({ date: validStr, value: rowTotal, method: label, bold });
+        paymentRows.push({
+          date: validStr,
+          value: total,
+          method: "Crédito (Maquininha)",
+          bold: false,
+        });
       }
+    } else {
+      // PIX, CASH, DEBIT
+      const labelMap: Record<string, string> = {
+        PIX: "Pix",
+        CASH: "Dinheiro",
+        DEBIT: "Débito",
+      };
+      paymentRows.push({
+        date: validStr,
+        value: total,
+        method: labelMap[method] ?? method,
+        bold: false,
+      });
+    }
+  } else {
+    // No method set — simulation of all options
+
+    // Pix / Dinheiro
+    const pixTotal = baseSubtotal + freight - discount;
+    paymentRows.push({ date: validStr, value: pixTotal, method: "Pix / Dinheiro", bold: true });
+
+    // Débito
+    const debitTotal = baseSubtotal * (1 + debitFeePercent / 100) + freight - discount;
+    paymentRows.push({ date: validStr, value: debitTotal, method: "Débito", bold: false });
+
+    // Link de Pagamento — auto rows: à vista, 2x, 3x, 4x, 5x, 6x
+    const linkTotal = baseSubtotal * (1 + linkFeePercent / 100) + freight - discount;
+    [1, 2, 3, 4, 5, 6].forEach((n) => {
+      paymentRows.push({
+        date: validStr,
+        value: linkTotal,
+        method: n === 1
+          ? "Link de Pagamento — À vista"
+          : `Link de Pagamento — ${n}x de ${fmt(linkTotal / n)}`,
+        bold: false,
+      });
     });
+
+    // Crédito (Maquininha) — only if creditInstallments provided
+    if (creditInstallments.length > 0) {
+      creditInstallments.forEach((ci) => {
+        paymentRows.push({
+          date: validStr,
+          value: ci.value * ci.installments + freight - discount,
+          method: ci.installments === 1
+            ? "Crédito (Maquininha) — À vista"
+            : `Crédito (Maquininha) — ${ci.installments}x de ${fmt(ci.value)}`,
+          bold: false,
+        });
+      });
+    }
   }
 
   return (

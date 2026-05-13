@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -37,7 +38,7 @@ import {
   Clock,
   Pencil,
   Trash2,
-  AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,10 +49,18 @@ import {
   deleteQuote,
   updateQuotePaymentMethod,
 } from "./actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PDFDownloadButton } from "@/modules/pdf/pdf-download-button";
-import type { Quote, Customer, FreightZone, QuoteItem, Product, Category } from "@/types";
+import type { Quote, Customer, FreightZone, QuoteItem, Product, Category, QuoteCreditInstallment } from "@/types";
 
 const STATUS_MAP = {
   DRAFT: { label: "Rascunho", variant: "gray" as const },
@@ -61,18 +70,13 @@ const STATUS_MAP = {
   CANCELLED: { label: "Cancelado", variant: "destructive" as const },
 };
 
-const PAYMENT_OPTIONS = [
-  { value: "PIX", label: "Pix" },
-  { value: "CASH", label: "Dinheiro" },
-  { value: "DEBIT", label: "Débito (+1.99%)" },
-  { value: "CREDIT", label: "Crédito (+4.99%)" },
-  { value: "LINK_3X", label: "Maquininha (+12.71%)" },
-];
+const PAYMENT_OPTION_KEYS = ["PIX", "CASH", "DEBIT", "LINK_3X"] as const;
 
 type QuoteWithDetails = Quote & {
   customer: Customer;
   freightZone: FreightZone | null;
   items: (QuoteItem & { product: Product & { category: Category | null } })[];
+  creditInstallments: QuoteCreditInstallment[];
 };
 
 interface QuoteDetailProps {
@@ -83,16 +87,18 @@ interface QuoteDetailProps {
   companyCnpj?: string;
   companyEmail?: string;
   signatureText?: string;
+  debitFeePercent?: number;
+  linkFeePercent?: number;
 }
 
-export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, companyCnpj, companyEmail, signatureText }: QuoteDetailProps) {
+export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, companyCnpj, companyEmail, signatureText, debitFeePercent = 1.99, linkFeePercent = 12.71 }: QuoteDetailProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
-  const [pendingMethod, setPendingMethod] = useState<string>("");
-  const [payOpen, setPayOpen] = useState(false);
-  const [payMethod, setPayMethod] = useState<string>("");
+  // Change payment method (editable until PAID)
+  const [changePayOpen, setChangePayOpen] = useState(false);
+  const [changeMethod, setChangeMethod] = useState<string>(quote.paymentMethod ?? "");
+  const [changeInstallments, setChangeInstallments] = useState<number>(quote.installments ?? 1);
 
   const status = STATUS_MAP[quote.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.DRAFT;
   const isPaid = quote.status === "PAID";
@@ -117,54 +123,29 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
     }
   }
 
-  async function handleSendConfirm() {
-    setLoading(true);
-    if (pendingMethod && !quote.paymentMethod) {
-      const pmResult = await updateQuotePaymentMethod(
-        quote.id,
-        pendingMethod as "PIX" | "CASH" | "DEBIT" | "CREDIT" | "LINK_3X"
-      );
-      if (!pmResult.success) {
-        toast.error(pmResult.error);
-        setLoading(false);
-        return;
-      }
-    }
-    const result = await updateQuoteStatus(quote.id, "SENT");
-    setLoading(false);
-    setSendOpen(false);
-    if (!result.success) {
-      toast.error(result.error);
-    } else {
-      toast.success("Orçamento marcado como enviado!");
-      router.refresh();
-    }
-  }
-
   function handleSendClick() {
-    if (!quote.paymentMethod) {
-      setSendOpen(true);
-    } else {
-      handleStatus("SENT");
-    }
+    handleStatus("SENT");
   }
 
-  async function handlePayConfirm() {
+  async function confirmPayment(
+    method: "PIX" | "CASH" | "DEBIT" | "LINK_3X" | "CREDIT",
+    installments?: number | null,
+    installmentValue?: number | null
+  ) {
     setLoading(true);
-    if (payMethod && !quote.paymentMethod) {
-      const pmResult = await updateQuotePaymentMethod(
-        quote.id,
-        payMethod as "PIX" | "CASH" | "DEBIT" | "CREDIT" | "LINK_3X"
-      );
-      if (!pmResult.success) {
-        toast.error(pmResult.error);
-        setLoading(false);
-        return;
-      }
+    const pmResult = await updateQuotePaymentMethod(
+      quote.id,
+      method,
+      installments ?? null,
+      installmentValue ?? null
+    );
+    if (!pmResult.success) {
+      toast.error(pmResult.error);
+      setLoading(false);
+      return;
     }
     const result = await updateQuoteStatus(quote.id, "PAID");
     setLoading(false);
-    setPayOpen(false);
     if (!result.success) {
       toast.error(result.error);
     } else {
@@ -173,12 +154,23 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
     }
   }
 
-  function handlePayClick() {
-    if (!quote.paymentMethod) {
-      setPayMethod("");
-      setPayOpen(true);
+  async function handleChangePayConfirm() {
+    if (!changeMethod) return;
+    setLoading(true);
+    const isLink = changeMethod === "LINK_3X";
+    const result = await updateQuotePaymentMethod(
+      quote.id,
+      changeMethod as "PIX" | "CASH" | "DEBIT" | "CREDIT" | "LINK_3X",
+      isLink ? changeInstallments : null,
+      null // installmentValue is auto-calculated server-side for LINK_3X
+    );
+    setLoading(false);
+    setChangePayOpen(false);
+    if (!result.success) {
+      toast.error(result.error);
     } else {
-      handleStatus("PAID");
+      toast.success("Forma de pagamento atualizada!");
+      router.refresh();
     }
   }
 
@@ -224,6 +216,42 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
     window.open(`https://wa.me/55${phone}`, "_blank");
   }
 
+  // Build smart payment options for confirmation dropdown
+  const freight = Number(quote.freightValue.toString());
+  const discount = Number(quote.discount.toString());
+  const baseSubtotal = quote.items.reduce(
+    (sum, item) => sum + Number(item.unitPrice.toString()) * item.quantity, 0
+  );
+  const pixTotal = baseSubtotal + freight - discount;
+  const debitTotal = baseSubtotal * (1 + debitFeePercent / 100) + freight - discount;
+  const linkTotal = baseSubtotal * (1 + linkFeePercent / 100) + freight - discount;
+
+  type PayOption = {
+    label: string;
+    sublabel?: string;
+    method: "PIX" | "CASH" | "DEBIT" | "LINK_3X";
+    installments?: number;
+    installmentValue?: number;
+  };
+
+  const payOptions: PayOption[] = [];
+
+  // PIX / Dinheiro
+  payOptions.push({ label: "Pix / Dinheiro", sublabel: formatCurrency(pixTotal), method: "PIX" });
+  // Débito
+  payOptions.push({ label: `Débito (+${debitFeePercent}%)`, sublabel: formatCurrency(debitTotal), method: "DEBIT" });
+  // Link de Pagamento — à vista + parcelas
+  const linkInstallmentOptions = [1, 2, 3, 4, 5, 6];
+  linkInstallmentOptions.forEach((n) => {
+    payOptions.push({
+      label: n === 1 ? "Link de Pagamento — À vista" : `Link de Pagamento — ${n}x`,
+      sublabel: n === 1 ? formatCurrency(linkTotal) : `${formatCurrency(linkTotal / n)} / parcela = ${formatCurrency(linkTotal)}`,
+      method: "LINK_3X",
+      installments: n,
+      installmentValue: n > 1 ? linkTotal / n : undefined,
+    });
+  });
+
   return (
     <div className="space-y-4 max-w-5xl">
       {/* Back link + header */}
@@ -266,6 +294,12 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
           companyCnpj={companyCnpj}
           companyEmail={companyEmail}
           signatureText={signatureText}
+          debitFeePercent={debitFeePercent}
+          linkFeePercent={linkFeePercent}
+          creditInstallments={quote.creditInstallments.map((ci) => ({
+            installments: ci.installments,
+            value: Number(ci.value.toString()),
+          }))}
         />
         <Button variant="outline" size="sm" onClick={handleDuplicate}>
           <FileText className="w-3.5 h-3.5 mr-1" />
@@ -336,15 +370,82 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             </Button>
           )}
           {quote.status === "AWAITING_PAYMENT" && (
-            <Button
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={handlePayClick}
-              disabled={loading}
-            >
-              <CheckCircle className="w-3.5 h-3.5 mr-1" />
-              Confirmar Pago
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={loading}
+                >
+                  <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                  Confirmar Pago
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Como o cliente pagou?
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* PIX / Débito */}
+                {payOptions.filter(o => o.method !== "LINK_3X").map((opt, i) => (
+                  <DropdownMenuItem
+                    key={i}
+                    onClick={() => confirmPayment(opt.method)}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <span>{opt.label}</span>
+                    <span className="text-xs font-semibold text-muted-foreground ml-2">{opt.sublabel}</span>
+                  </DropdownMenuItem>
+                ))}
+
+                <DropdownMenuSeparator />
+
+                {/* Link de Pagamento */}
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal py-1">
+                  Link de Pagamento (+{linkFeePercent}%)
+                </DropdownMenuLabel>
+                {payOptions.filter(o => o.method === "LINK_3X").map((opt, i) => (
+                  <DropdownMenuItem
+                    key={i}
+                    onClick={() => confirmPayment("LINK_3X", opt.installments, opt.installmentValue)}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="text-sm">
+                      {opt.installments === 1 ? "À vista" : `${opt.installments}x de ${formatCurrency(linkTotal / opt.installments!)}`}
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground ml-2">{formatCurrency(linkTotal)}</span>
+                  </DropdownMenuItem>
+                ))}
+
+                {/* Crédito (maquininha) — se houver parcelas configuradas */}
+                {quote.creditInstallments.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal py-1">
+                      Crédito (Maquininha)
+                    </DropdownMenuLabel>
+                    {quote.creditInstallments.map((ci) => {
+                      const ciValue = Number(ci.value.toString());
+                      const ciTotal = ciValue * ci.installments;
+                      return (
+                        <DropdownMenuItem
+                          key={ci.id}
+                          onClick={() => confirmPayment("CREDIT", ci.installments, ciValue)}
+                          className="flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="text-sm">
+                            {ci.installments === 1 ? "À vista" : `${ci.installments}x de ${formatCurrency(ciValue)}`}
+                          </span>
+                          <span className="text-xs font-semibold text-muted-foreground ml-2">{formatCurrency(ciTotal)}</span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -401,6 +502,12 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
                       ? PAYMENT_METHOD_LABELS[quote.paymentMethod]
                       : "Não definido"}
                   </p>
+                  {quote.installments && quote.installments > 1 && quote.installmentValue && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {quote.installments}x de{" "}
+                      {formatCurrency(Number(quote.installmentValue.toString()))}
+                    </p>
+                  )}
                 </div>
                 {quote.freightZone && (
                   <div>
@@ -458,6 +565,55 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             </CardContent>
           </Card>
 
+          {/* Pagamento card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-sm">
+                    {quote.paymentMethod
+                      ? PAYMENT_METHOD_LABELS[quote.paymentMethod]
+                      : <span className="text-muted-foreground italic text-xs">Não definido</span>}
+                  </p>
+                  {quote.installments && quote.installments > 1 && quote.installmentValue && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {quote.installments}x de {formatCurrency(Number(quote.installmentValue.toString()))}
+                    </p>
+                  )}
+                  {quote.installments === 1 && quote.paymentMethod === "LINK_3X" && (
+                    <p className="text-xs text-muted-foreground mt-0.5">À vista</p>
+                  )}
+                  {quote.paymentMethod === "CREDIT" && quote.creditInstallments.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {quote.creditInstallments.map((ci) => (
+                        <p key={ci.id} className="text-xs text-muted-foreground">
+                          {ci.installments === 1 ? "À vista" : `${ci.installments}x`} de {formatCurrency(Number(ci.value.toString()))}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {!isPaid && !isCancelled && quote.paymentMethod && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setChangeMethod(quote.paymentMethod ?? "");
+                      setChangeInstallments(quote.installments ?? 1);
+                      setChangePayOpen(true);
+                    }}
+                  >
+                    Alterar
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="sticky top-4">
             <CardHeader>
               <CardTitle className="text-base">Valores</CardTitle>
@@ -487,6 +643,11 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
                   {formatCurrency(Number(quote.finalTotal.toString()))}
                 </span>
               </div>
+              {quote.installments && quote.installments > 1 && quote.installmentValue && (
+                <p className="text-xs text-primary font-medium text-right">
+                  {quote.installments}x de {formatCurrency(Number(quote.installmentValue.toString()))}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -512,87 +673,76 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
         </DialogContent>
       </Dialog>
 
-      {/* Confirm payment dialog (when no payment method set) */}
-      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+      {/* Change payment method dialog */}
+      <Dialog open={changePayOpen} onOpenChange={setChangePayOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirmar Pagamento</DialogTitle>
+            <DialogTitle>Alterar Forma de Pagamento</DialogTitle>
           </DialogHeader>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-800">
-              Este orçamento não tem forma de pagamento definida. Selecione antes de confirmar.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Forma de pagamento *</label>
-            <Select value={payMethod} onValueChange={setPayMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Método</label>
+              <Select value={changeMethod} onValueChange={(v) => {
+                setChangeMethod(v);
+                if (v !== "LINK_3X") setChangeInstallments(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_OPTION_KEYS.map((k) => {
+                    const feeLabel =
+                      k === "DEBIT" ? ` (+${debitFeePercent}%)`
+                      : k === "LINK_3X" ? ` (+${linkFeePercent}%)`
+                      : "";
+                    return (
+                      <SelectItem key={k} value={k}>
+                        {PAYMENT_METHOD_LABELS[k]}{feeLabel}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {changeMethod === "LINK_3X" && (
+              <div className="space-y-2 border border-border rounded-md p-3 bg-muted/20">
+                <p className="text-xs font-medium text-muted-foreground">Parcelamento (opcional)</p>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Número de parcelas</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="24"
+                    placeholder="Ex: 3"
+                    value={changeInstallments === 1 ? "" : changeInstallments}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setChangeInstallments(isNaN(v) || v < 1 ? 1 : v);
+                    }}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O valor por parcela será calculado automaticamente ao salvar.
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setPayOpen(false)}>
+            <Button variant="outline" onClick={() => setChangePayOpen(false)}>
               Cancelar
             </Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={handlePayConfirm}
-              disabled={loading || !payMethod}
+              onClick={handleChangePayConfirm}
+              disabled={loading || !changeMethod}
             >
-              <CheckCircle className="w-3.5 h-3.5 mr-1" />
-              Confirmar Pago
+              Salvar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Send without payment method dialog */}
-      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Marcar como Enviado</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-800">
-              Este orçamento não tem forma de pagamento definida. Você pode definir agora ou enviar assim mesmo.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Forma de pagamento (opcional)</label>
-            <Select value={pendingMethod} onValueChange={setPendingMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setSendOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSendConfirm} disabled={loading}>
-              <Send className="w-3.5 h-3.5 mr-1" />
-              Enviar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

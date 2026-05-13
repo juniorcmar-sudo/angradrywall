@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
-import type { QuotePDFProps } from "./quote-pdf";
+import type { QuotePDFProps, CreditInstallmentProp } from "./quote-pdf";
 
 const PDFButtonInner = dynamic(
   () => import("./pdf-button-inner").then((m) => m.PDFButtonInner),
@@ -18,7 +18,11 @@ const PDFButtonInner = dynamic(
   }
 );
 
-type PDFDownloadButtonProps = Omit<QuotePDFProps, "logoUrl">;
+type PDFDownloadButtonProps = Omit<QuotePDFProps, "logoUrl"> & {
+  debitFeePercent?: number;
+  linkFeePercent?: number;
+  creditInstallments?: CreditInstallmentProp[];
+};
 
 export function PDFDownloadButton({
   quote,
@@ -28,6 +32,9 @@ export function PDFDownloadButton({
   companyCnpj,
   companyEmail,
   signatureText,
+  debitFeePercent,
+  linkFeePercent,
+  creditInstallments,
 }: PDFDownloadButtonProps) {
   const logoUrl =
     typeof window !== "undefined"
@@ -45,6 +52,9 @@ export function PDFDownloadButton({
       signatureText={signatureText}
       logoUrl={logoUrl}
       fileName={`orcamento-${quote.number}.pdf`}
+      debitFeePercent={debitFeePercent}
+      linkFeePercent={linkFeePercent}
+      creditInstallments={creditInstallments}
     />
   );
 }

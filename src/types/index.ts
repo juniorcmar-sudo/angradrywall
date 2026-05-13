@@ -6,6 +6,7 @@ import type {
   Tag,
   Quote,
   QuoteItem,
+  QuoteCreditInstallment,
   Sale,
   SaleItem,
   StockMovement,
@@ -28,6 +29,7 @@ export type {
   Tag,
   Quote,
   QuoteItem,
+  QuoteCreditInstallment,
   Sale,
   SaleItem,
   StockMovement,
@@ -56,6 +58,7 @@ export type QuoteWithDetails = Quote & {
   customer: Customer;
   freightZone: FreightZone | null;
   items: (QuoteItem & { product: Product })[];
+  creditInstallments: QuoteCreditInstallment[];
 };
 
 export type SaleWithDetails = Sale & {

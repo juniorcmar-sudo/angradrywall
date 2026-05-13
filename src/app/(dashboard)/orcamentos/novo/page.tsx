@@ -20,6 +20,8 @@ export default async function NovoOrcamentoPage() {
           products={products}
           freightZones={freightZones}
           companyAddress={settings?.companyAddress}
+          debitFeePercent={settings?.debitFeePercent ? Number(settings.debitFeePercent) : 1.99}
+          linkFeePercent={settings?.installmentFeePercent ? Number(settings.installmentFeePercent) : 12.71}
         />
       </div>
     </div>

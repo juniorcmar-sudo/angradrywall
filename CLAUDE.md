@@ -151,13 +151,25 @@ src/
 ## Regras de negócio implementadas
 
 ### Pagamento
-| Método | Chave enum | Taxa |
-|---|---|---|
-| Pix | PIX | 0% |
-| Dinheiro | CASH | 0% |
-| Débito | DEBIT | 1.99% |
-| Crédito maquininha | CREDIT | 4.99% |
-| Link até 12x | LINK_3X | 3.99% |
+| Método | Chave enum | Taxa | Comportamento |
+|---|---|---|---|
+| Pix | PIX | 0% | Sem taxa |
+| Dinheiro | CASH | 0% | Sem taxa |
+| Débito | DEBIT | settings.debitFeePercent (~1.99%) | Taxa automática |
+| Link de Pagamento | LINK_3X | settings.installmentFeePercent (~12.71%) | Taxa automática, parcelas auto-calculadas |
+| Crédito (Maquininha) | CREDIT | Nenhuma | Parcelas manuais — valor exato salvo em `QuoteCreditInstallment` |
+
+> **CRÍTICO:** CREDIT e LINK_3X são fluxos completamente diferentes.
+> - LINK_3X: aplica % fee sobre o subtotal base; parcela = finalTotal / N
+> - CREDIT: sem fee; valor total = installmentValue × installments (exato, informado manualmente)
+> - CREDIT NÃO aparece como card no quote-builder — tem painel próprio "Crédito / Maquininha"
+> - Ao confirmar pagamento: `confirmPayment("CREDIT", ci.installments, ciValue)` — NUNCA usar "LINK_3X" para crédito
+
+### QuoteCreditInstallment
+- Tabela: `quote_credit_installments`
+- Campos: `id`, `quoteId`, `installments: Int`, `value: Decimal` (por parcela), `sortOrder: Int`
+- Sempre salvos junto ao orçamento, independente do paymentMethod
+- Aparecem no PDF como seção "Crédito (Maquininha)"
 
 Preços base salvos: `basePriceCommon` e `basePriceDrywall`. Taxa calculada dinamicamente — nunca salva.
 
@@ -181,11 +193,24 @@ Ao marcar como `PAID`: cria Sale, baixa estoque, cria PendingOrder se estoque in
 
 - Busca de cliente: client-side por nome, telefone, razão social, CPF/CNPJ
 - Form inline de novo cliente: usa `createCustomerQuick` → auto-seleciona
+  - Campos obrigatórios: nome, tipo, telefone 1
+  - Campos opcionais: telefone 2, razão social, CPF/CNPJ, email, endereço completo, observações
+  - Layout: header fixo + campos com scroll (max-h-420px) + botão salvar fixo no rodapé
 - ViaCEP: `https://viacep.com.br/ws/{8digits}/json/` auto-preenche rua/bairro/cidade/uf
-- PIX e Dinheiro: cards grandes com badge "Melhor valor" e "A partir de R$ X à vista"
-- Débito, Crédito, Link: botões menores abaixo
-- Props necessárias: `customers`, `products`, `freightZones`, `companyAddress?`
-- `companyAddress` vem de `getSettings()` na página `orcamentos/novo/page.tsx`
+- PIX e Dinheiro: cards grandes com badge "Melhor valor"
+- Débito e Link de Pagamento: botões menores — CREDIT não aparece nos cards
+- Painel "Crédito / Maquininha": sempre visível, adicionar parcelas manuais (installments + value)
+- Props necessárias: `customers`, `products`, `freightZones`, `companyAddress?`, `debitFeePercent?`, `linkFeePercent?`
+- `companyAddress`, `debitFeePercent`, `linkFeePercent` vêm de `getSettings()` na página
+
+## Quote Detail — comportamento atual
+
+- Botão "Confirmar Pago": DropdownMenu (não modal) com opções calculadas dinamicamente
+  - PIX / Dinheiro: valor base
+  - Débito: base × (1 + debitFee%)
+  - Link de Pagamento: à vista / 2x / 3x / 4x / 5x / 6x (base × (1 + linkFee%))
+  - Crédito (Maquininha): aparece apenas se `quote.creditInstallments.length > 0`; usa valor exato × parcelas
+- Botão "Alterar" método de pagamento: só aparece se `quote.paymentMethod` já está definido
 
 ---
 
@@ -209,6 +234,11 @@ Padrão de dois arquivos para evitar erro "su is not a function" do @react-pdf:
 | react-pdf + next/dynamic | Separar em dois arquivos (ver seção PDF) |
 | `middleware.ts` não funciona no Next.js 16 | Usar `proxy.ts` com função exportada como `proxy` |
 | `DialogContent` sem `aria-describedby` gera warning Radix | Já tem `aria-describedby={undefined}` no componente base |
+| `z.coerce.number()` com null/undefined | Coerce converte null→0, quebra `.min(1)`. Usar `z.number()` + `{ valueAsNumber: true }` |
+| Input numérico retorna string para Zod | Adicionar `{ valueAsNumber: true }` no `register()` do react-hook-form |
+| Turbopack cacheia cliente Prisma após mudança de schema | Apagar `.next/cache` e reiniciar o servidor |
+| Crédito confirmado com taxa errada | Usar `confirmPayment("CREDIT", ...)` — nunca `"LINK_3X"` para parcelas manuais |
+| `settings.creditFeePercent` removido | Campo não existe mais no schema/form — usar `installmentFeePercent` para Link de Pagamento |
 
 ---
 
@@ -226,8 +256,6 @@ Cores no histórico: verde=entrada, azul=venda, amarelo=ajuste, vermelho=perda/a
 ## Próximas features a implementar
 
 - Criação inline de categoria/tag no formulário de produto (`createCategory`/`createTag` foram removidos — recriar quando houver UI)
-- Edição de orçamento (atualmente só criação — não há `updateQuote`)
-- Orçamento editável via página `/orcamentos/[id]` (hoje só muda status)
 - Timeline de eventos por entidade
 - Exportação de relatórios (CSV/Excel)
-- Integração WhatsApp (copiar mensagem + abrir link)
+- Rate limiting no `/api/login` via nginx/Coolify no deploy

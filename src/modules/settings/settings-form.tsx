@@ -20,7 +20,6 @@ const schema = z.object({
   companyAddress: z.string().optional(),
   signatureText: z.string().optional(),
   quoteExpirationDays: z.number().int().min(1).max(30),
-  creditFeePercent: z.number().min(0),
   debitFeePercent: z.number().min(0),
   installmentFeePercent: z.number().min(0),
 });
@@ -46,7 +45,6 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       companyAddress: settings?.companyAddress ?? "",
       signatureText: settings?.signatureText ?? "",
       quoteExpirationDays: settings?.quoteExpirationDays ?? 3,
-      creditFeePercent: settings ? Number(settings.creditFeePercent.toString()) : 4.99,
       debitFeePercent: settings ? Number(settings.debitFeePercent.toString()) : 1.99,
       installmentFeePercent: settings ? Number(settings.installmentFeePercent.toString()) : 12.71,
     },
@@ -122,7 +120,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
           <CardTitle className="text-base">Taxas de Pagamento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Débito (%)</Label>
               <Input
@@ -133,16 +131,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Crédito (%)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("creditFeePercent", { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Maquininha (%)</Label>
+              <Label>Link de Pagamento (%)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -152,7 +141,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Pix e Dinheiro: 0% (sem taxa)
+            Pix, Dinheiro e Crédito (maquininha): sem taxa fixa.
           </p>
         </CardContent>
       </Card>

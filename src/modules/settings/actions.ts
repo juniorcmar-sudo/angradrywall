@@ -13,7 +13,6 @@ const settingsSchema = z.object({
   companyAddress: z.string().optional(),
   signatureText: z.string().optional(),
   quoteExpirationDays: z.coerce.number().int().min(1).max(30),
-  creditFeePercent: z.coerce.number().min(0),
   debitFeePercent: z.coerce.number().min(0),
   installmentFeePercent: z.coerce.number().min(0),
 });

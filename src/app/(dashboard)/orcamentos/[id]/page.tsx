@@ -32,6 +32,8 @@ export default async function QuotePage({ params }: Props) {
           companyPhone={settings?.companyPhone ?? undefined}
           companyAddress={settings?.companyAddress ?? undefined}
           signatureText={settings?.signatureText ?? undefined}
+          debitFeePercent={settings?.debitFeePercent ? Number(settings.debitFeePercent) : 1.99}
+          linkFeePercent={settings?.installmentFeePercent ? Number(settings.installmentFeePercent) : 12.71}
         />
       </div>
     </div>
