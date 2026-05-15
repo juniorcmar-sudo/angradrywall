@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MoreHorizontal, Search, UserPlus, Eye, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, UserPlus, Eye, Pencil, Trash2, ChevronRight, Phone } from "lucide-react";
 import Link from "next/link";
 import { deleteCustomer } from "./actions";
 import { toast } from "sonner";
@@ -84,7 +84,47 @@ export function CustomersTable({ customers }: CustomersTableProps) {
         </Button>
       </div>
 
-      <div className="rounded-md border border-border overflow-x-auto">
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhum cliente encontrado</p>
+        ) : (
+          filtered.map((customer) => (
+            <div
+              key={customer.id}
+              className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-medium text-sm truncate">{customer.name}</p>
+                  <Badge
+                    variant={customer.type === "DRYWALL_WORKER" ? "info" : "secondary"}
+                    className="text-[10px] py-0 px-1.5 flex-shrink-0"
+                  >
+                    {customer.type === "DRYWALL_WORKER" ? "Gesseiro" : "Comum"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Phone className="w-3 h-3 flex-shrink-0" />
+                  <span>{customer.phone1 ?? "—"}</span>
+                  <span className="ml-2">{customer._count.quotes} orç.</span>
+                  {customer._count.sales > 0 && (
+                    <span>· {customer._count.sales} vendas</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Link href={`/clientes/${customer.id}`}>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                </Link>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

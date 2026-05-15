@@ -1,12 +1,11 @@
 "use client";
 
-import { MobileNavProvider, useMobileNav } from "./mobile-nav-context";
+import { MobileNavProvider } from "./mobile-nav-context";
 import { Sidebar } from "./sidebar";
+import { BottomNav } from "./bottom-nav";
 import { ReactNode } from "react";
 
 function ShellInner({ children }: { children: ReactNode }) {
-  const { isOpen, close } = useMobileNav();
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
 
@@ -15,25 +14,14 @@ function ShellInner({ children }: { children: ReactNode }) {
         <Sidebar />
       </div>
 
-      {/* ── Mobile overlay — só renderiza quando aberto ── */}
-      {isOpen && (
-        <div className="md:hidden">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/60 z-40"
-            onClick={close}
-          />
-          {/* Drawer */}
-          <div className="fixed inset-y-0 left-0 z-50 flex">
-            <Sidebar />
-          </div>
-        </div>
-      )}
-
       {/* ── Conteúdo principal ── */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        {/* pb-16 reserva espaço para o bottom nav no mobile */}
+        <div className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</div>
       </main>
+
+      {/* ── Bottom nav — mobile only ── */}
+      <BottomNav />
 
     </div>
   );

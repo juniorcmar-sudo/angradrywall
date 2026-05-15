@@ -19,13 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Search, Plus, Eye, Copy } from "lucide-react";
+import { MoreHorizontal, Search, Plus, Eye, Copy, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import Link from "next/link";
 import { updateQuoteStatus, duplicateQuote } from "./actions";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import type { Quote, Customer, FreightZone, QuoteItem, Product } from "@/types";
 
@@ -104,7 +104,50 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
         </Link>
       </div>
 
-      <div className="rounded-md border border-border overflow-x-auto">
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhum orçamento encontrado</p>
+        ) : (
+          filtered.map((quote) => {
+            const status = STATUS_MAP[quote.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.DRAFT;
+            return (
+              <div
+                key={quote.id}
+                onClick={() => router.push(`/orcamentos/${quote.id}`)}
+                className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card cursor-pointer active:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-semibold text-muted-foreground">
+                      #{quote.number}
+                    </span>
+                    <Badge variant={status.variant} className="text-[10px] py-0 px-1.5">
+                      {status.label}
+                    </Badge>
+                  </div>
+                  <p className="font-medium text-sm truncate">{quote.customer.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {quote.paymentMethod ? PAYMENT_LABELS[quote.paymentMethod] ?? quote.paymentMethod : "Sem pagamento"}
+                    {quote.validUntil && (
+                      <> · Válido até {format(new Date(quote.validUntil), "dd/MM", { locale: ptBR })}</>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="font-semibold text-sm">
+                    {formatCurrency(Number(quote.finalTotal.toString()))}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

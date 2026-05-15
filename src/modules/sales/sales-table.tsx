@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronRight } from "lucide-react";
 import { formatCurrency, PAYMENT_METHOD_LABELS } from "@/utils/currency";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -212,7 +212,45 @@ export function SalesTable({ sales }: SalesTableProps) {
         </div>
       )}
 
-      <div className="rounded-md border border-border overflow-x-auto">
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhuma venda encontrada</p>
+        ) : (
+          filtered.map((sale) => (
+            <Link key={sale.id} href={`/orcamentos/${sale.quoteId}`}>
+              <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card active:bg-muted/50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-xs font-semibold text-muted-foreground">
+                      #{sale.quote.number}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {PAYMENT_METHOD_LABELS[sale.paymentMethod]}
+                    </span>
+                  </div>
+                  <p className="font-medium text-sm truncate">{sale.customer.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(sale.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                    {sale.items.length > 0 && (
+                      <> · {sale.items.length} {sale.items.length === 1 ? "item" : "itens"}</>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="font-semibold text-sm">
+                    {formatCurrency(Number(sale.total.toString()))}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

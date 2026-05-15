@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MoreHorizontal, Search, Plus, Pencil, AlertTriangle, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Plus, Pencil, AlertTriangle, Trash2, Package } from "lucide-react";
 import { toggleProductActive, deleteProduct } from "./actions";
 import { toast } from "sonner";
 import { ProductForm } from "./product-form";
@@ -99,7 +99,56 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
         </Button>
       </div>
 
-      <div className="rounded-md border border-border overflow-x-auto">
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhum produto encontrado</p>
+        ) : (
+          filtered.map((product) => {
+            const isLowStock = product.stock <= product.minimumStock && product.minimumStock > 0;
+            const isInactive = !product.active;
+            return (
+              <div
+                key={product.id}
+                className={`flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card ${isInactive ? "opacity-50" : ""}`}
+              >
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <p className="font-medium text-sm truncate">{product.name}</p>
+                    {isInactive && <Badge variant="gray" className="text-[10px] py-0 px-1.5">Inativo</Badge>}
+                    {isLowStock && !isInactive && <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className={isLowStock ? "text-red-400 font-semibold" : ""}>
+                      {product.stock} em estoque
+                    </span>
+                    {product.category && (
+                      <span>· {product.category.name}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span className="font-semibold text-sm">
+                    {formatCurrency(Number(product.basePriceCommon.toString()))}
+                  </span>
+                  <button
+                    onClick={() => setEditingProduct(product)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Editar
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
