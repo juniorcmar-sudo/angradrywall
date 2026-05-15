@@ -39,6 +39,7 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -301,6 +302,14 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             value: Number(ci.value.toString()),
           }))}
         />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open(`/orcamentos/${quote.id}/cupom`, "_blank")}
+        >
+          <Printer className="w-3.5 h-3.5 mr-1" />
+          Imprimir
+        </Button>
         <Button variant="outline" size="sm" onClick={handleDuplicate}>
           <FileText className="w-3.5 h-3.5 mr-1" />
           Duplicar
