@@ -14,7 +14,7 @@ export default async function NovoOrcamentoPage() {
   return (
     <div>
       <Header title="Novo Orçamento" description="Crie um orçamento rapidamente" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <QuoteBuilder
           customers={customers}
           products={products}

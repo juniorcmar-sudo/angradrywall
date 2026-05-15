@@ -90,7 +90,7 @@ export default async function RelatoriosPage() {
   return (
     <div>
       <Header title="Relatórios" description="Análises e métricas de desempenho" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <ReportsView data={data} />
       </div>
     </div>

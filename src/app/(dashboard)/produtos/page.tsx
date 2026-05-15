@@ -11,7 +11,7 @@ export default async function ProdutosPage() {
   return (
     <div>
       <Header title="Produtos" description="Gerencie seu catálogo de produtos" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <ProductsTable products={products} categories={categories} tags={tags} />
       </div>
     </div>

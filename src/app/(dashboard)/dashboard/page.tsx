@@ -88,7 +88,7 @@ export default async function DashboardPage() {
         title="Dashboard"
         description="Visão geral da operação comercial"
       />
-      <div className="p-6 space-y-6">
+      <div className="p-3 md:p-6 space-y-6">
         <DashboardCards data={data} />
         <DashboardCharts monthlySalesData={data.monthlySalesChart} />
         <DashboardAlerts

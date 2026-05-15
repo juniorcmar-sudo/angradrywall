@@ -13,7 +13,7 @@ export default async function ConfiguracoesPage() {
   return (
     <div>
       <Header title="Configurações" description="Configure o sistema" />
-      <div className="p-6 max-w-3xl">
+      <div className="p-3 md:p-6 max-w-3xl">
         <SettingsForm settings={settings} />
       </div>
     </div>

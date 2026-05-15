@@ -9,7 +9,7 @@ export default async function OrcamentosPage() {
   return (
     <div>
       <Header title="Orçamentos" description="Gerencie todos os orçamentos" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <QuotesTable quotes={quotes} />
       </div>
     </div>

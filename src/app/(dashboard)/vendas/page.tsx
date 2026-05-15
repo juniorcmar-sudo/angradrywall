@@ -20,7 +20,7 @@ export default async function VendasPage() {
   return (
     <div>
       <Header title="Vendas" description="Histórico de todas as vendas concluídas" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <SalesTable sales={sales} />
       </div>
     </div>

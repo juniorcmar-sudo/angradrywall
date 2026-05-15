@@ -23,7 +23,7 @@ export default async function QuotePage({ params }: Props) {
         title={`Orçamento #${quote.number}`}
         description={quote.customer.name}
       />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <QuoteDetail
           quote={quote}
           companyName={settings?.companyName}

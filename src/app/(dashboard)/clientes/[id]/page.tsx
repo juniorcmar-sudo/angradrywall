@@ -20,7 +20,7 @@ export default async function CustomerPage({ params }: Props) {
         title={customer.name}
         description={customer.type === "DRYWALL_WORKER" ? "Gesseiro" : "Cliente Comum"}
       />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <CustomerDetail customer={customer} />
       </div>
     </div>

@@ -9,7 +9,7 @@ export default async function FretesPage() {
   return (
     <div>
       <Header title="Fretes" description="Gerencie as zonas de frete por bairro" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <FreightZonesManager zones={zones} />
       </div>
     </div>

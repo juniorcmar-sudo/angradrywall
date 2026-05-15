@@ -9,7 +9,7 @@ export default async function NovoProdutoPage() {
   return (
     <div>
       <Header title="Novo Produto" description="Cadastre um novo produto" />
-      <div className="p-6 max-w-3xl">
+      <div className="p-3 md:p-6 max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle>Dados do produto</CardTitle>

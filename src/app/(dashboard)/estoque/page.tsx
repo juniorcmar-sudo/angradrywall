@@ -9,7 +9,7 @@ export default async function EstoquePage() {
   return (
     <div>
       <Header title="Estoque" description="Controle de entrada e saída de produtos" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <StockOverview {...data} />
       </div>
     </div>

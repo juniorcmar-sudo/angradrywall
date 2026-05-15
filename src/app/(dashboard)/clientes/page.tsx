@@ -9,7 +9,7 @@ export default async function ClientesPage() {
   return (
     <div>
       <Header title="Clientes" description="Gerencie seus clientes" />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <CustomersTable customers={customers} />
       </div>
     </div>

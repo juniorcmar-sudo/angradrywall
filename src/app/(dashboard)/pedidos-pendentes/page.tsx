@@ -20,7 +20,7 @@ export default async function PedidosPendentesPage() {
         title="Pedidos Pendentes"
         description="Produtos aguardando reposição de estoque"
       />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <PendingOrdersTable orders={orders} />
       </div>
     </div>

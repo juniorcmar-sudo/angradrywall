@@ -31,7 +31,7 @@ export default async function EditarOrcamentoPage({
   return (
     <div>
       <Header title="Editar Orçamento" description={`Editando orçamento #${id.slice(-8).toUpperCase()}`} />
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <QuoteBuilder
           customers={customers}
           products={products}

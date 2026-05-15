@@ -51,35 +51,31 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "relative flex flex-col h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300 z-40",
-        // Mobile: always expanded (no collapse), desktop: collapsible
-        "w-64 md:transition-all",
-        collapsed ? "md:w-16" : "md:w-64"
+        "flex flex-col h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
       )}
     >
       {/* Logo */}
       <div className={cn(
         "flex items-center justify-center border-b border-sidebar-border min-h-[72px]",
-        collapsed ? "md:px-2 px-4 py-3" : "px-4 py-3"
+        collapsed ? "px-2 py-3" : "px-4 py-3"
       )}>
         {collapsed ? (
-          <div className="hidden md:flex w-9 h-9 rounded-lg bg-white items-center justify-center overflow-hidden shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center overflow-hidden shadow-sm">
             <Image src="/logo.png" alt="AD" width={32} height={32} className="object-contain" />
           </div>
-        ) : null}
-        <div className={cn(
-          "bg-white rounded-xl px-3 py-2 w-full flex items-center justify-center shadow-sm",
-          collapsed ? "hidden md:hidden" : ""
-        )}>
-          <Image
-            src="/logo.png"
-            alt="Angra Drywall"
-            width={160}
-            height={52}
-            className="object-contain h-11 w-auto"
-            priority
-          />
-        </div>
+        ) : (
+          <div className="bg-white rounded-xl px-3 py-2 w-full flex items-center justify-center shadow-sm">
+            <Image
+              src="/logo.png"
+              alt="Angra Drywall"
+              width={160}
+              height={52}
+              className="object-contain h-11 w-auto"
+              priority
+            />
+          </div>
+        )}
       </div>
 
       {/* Nav */}
@@ -111,12 +107,9 @@ export function Sidebar() {
                     "flex-shrink-0 w-[18px] h-[18px]",
                     isActive ? "opacity-100" : "opacity-50 group-hover:opacity-80"
                   )} />
-                  <span className={cn(
-                    "truncate tracking-tight",
-                    collapsed ? "md:hidden" : ""
-                  )}>
-                    {item.label}
-                  </span>
+                  {!collapsed && (
+                    <span className="truncate tracking-tight">{item.label}</span>
+                  )}
                 </Link>
               </li>
             );
@@ -132,14 +125,14 @@ export function Sidebar() {
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all"
         >
           <LogOut className="flex-shrink-0 w-[18px] h-[18px]" />
-          <span className={cn(collapsed ? "md:hidden" : "")}>Sair</span>
+          {!collapsed && <span>Sair</span>}
         </button>
       </div>
 
       {/* Collapse toggle — desktop only */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-sidebar-background border border-sidebar-border items-center justify-center text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors z-50 shadow-sm"
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-sidebar-background border border-sidebar-border flex items-center justify-center text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors z-50 shadow-sm"
       >
         {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </button>

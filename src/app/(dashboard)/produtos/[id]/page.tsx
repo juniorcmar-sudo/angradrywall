@@ -30,7 +30,7 @@ export default async function EditProductPage({ params }: Props) {
         title="Editar Produto"
         description={product.name}
       />
-      <div className="p-6 max-w-3xl">
+      <div className="p-3 md:p-6 max-w-3xl">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Dados do Produto</CardTitle>
