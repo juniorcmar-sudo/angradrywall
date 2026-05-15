@@ -68,7 +68,8 @@ export async function GET(
     }
   }
 
-  const companyName  = esc((settings?.companyName  ?? "ANGRA DRYWALL").toUpperCase());
+  // Quebra o nome da empresa no " - " para cada parte ficar na sua linha
+  const companyName  = esc((settings?.companyName  ?? "ANGRA DRYWALL").toUpperCase()).replace(' - ', '<br>').replace(' – ', '<br>');
   const companyPhone = settings?.companyPhone   ?? "";
   const companyAddress = settings?.companyAddress ?? "";
 
@@ -117,7 +118,7 @@ export async function GET(
     * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; word-break: break-word; font-weight: 900; }
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 10px;
+      font-size: 11px;
       background: #eee;
       color: #000;
       display: flex;
@@ -130,19 +131,19 @@ export async function GET(
       padding: 8px 6px;
     }
     .center { text-align: center; }
-    h2 { font-size: 11px; line-height: 1.4; margin-bottom: 2px; }
-    .info { font-size: 9px; line-height: 14px; margin-top: 3px; }
+    h2 { font-size: 12px; line-height: 1.4; margin-bottom: 2px; }
+    .info { font-size: 10px; line-height: 15px; margin-top: 3px; }
     .d { border: none; border-top: 2px dashed #000; margin: 7px 0; }
-    .title { text-align: center; font-size: 11px; margin: 4px 0 2px; }
-    .onum  { text-align: center; font-size: 9px; margin-bottom: 3px; }
-    p { font-size: 9px; line-height: 14px; margin: 2px 0; }
-    .lbl { font-size: 9px; margin-bottom: 3px; letter-spacing: 0; }
-    .item-name { font-size: 9px; margin-top: 4px; }
-    .item-val  { font-size: 9px; padding-left: 8px; margin-bottom: 2px; }
-    .total-block { margin-top: 3px; font-size: 9px; }
+    .title { text-align: center; font-size: 12px; margin: 4px 0 2px; }
+    .onum  { text-align: center; font-size: 10px; margin-bottom: 3px; }
+    p { font-size: 10px; line-height: 15px; margin: 2px 0; }
+    .lbl { font-size: 10px; margin-bottom: 3px; letter-spacing: 0; }
+    .item-name { font-size: 10px; margin-top: 4px; }
+    .item-val  { font-size: 10px; padding-left: 8px; margin-bottom: 2px; }
+    .total-block { margin-top: 3px; font-size: 10px; }
     .total-block p { margin: 2px 0; }
-    .grand-total { font-size: 12px; margin-top: 5px; border-top: 2px dashed #000; padding-top: 4px; }
-    .footer { text-align: center; font-size: 8px; margin-top: 5px; line-height: 13px; }
+    .grand-total { font-size: 13px; margin-top: 5px; border-top: 2px dashed #000; padding-top: 4px; }
+    .footer { text-align: center; font-size: 9px; margin-top: 5px; line-height: 14px; }
 
     @media print {
       @page { size: 58mm auto; margin: 0; }
@@ -151,7 +152,7 @@ export async function GET(
         background: #fff;
         padding: 0;
         margin: 0;
-        font-size: 9px;
+        font-size: 10px;
       }
       .receipt {
         width: 100%;
@@ -159,10 +160,10 @@ export async function GET(
         padding: 1mm 2mm;
         margin: 0;
       }
-      h2 { font-size: 10px; }
-      .title { font-size: 10px; }
-      .onum, p, .info, .lbl, .item-name, .item-val, .footer { font-size: 8px; }
-      .grand-total { font-size: 11px; }
+      h2 { font-size: 11px; }
+      .title { font-size: 11px; }
+      .onum, p, .info, .lbl, .item-name, .item-val, .footer { font-size: 9px; }
+      .grand-total { font-size: 12px; }
     }
   </style>
 </head>
