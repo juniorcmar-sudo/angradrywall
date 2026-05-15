@@ -114,7 +114,7 @@ export async function GET(
   <meta charset="utf-8">
   <title>Cupom #${String(quote.number).padStart(4, "0")}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; word-break: break-word; overflow-wrap: break-word; }
     body {
       font-family: 'Courier New', Courier, monospace;
       font-size: 9px;
@@ -128,25 +128,26 @@ export async function GET(
       width: 210px;
       background: #fff;
       padding: 8px 6px;
+      max-width: 100%;
     }
     .center { text-align: center; }
-    h2 { font-size: 11px; font-weight: bold; line-height: 1.3; margin-bottom: 1px; }
+    h2 { font-size: 10px; font-weight: bold; line-height: 1.4; margin-bottom: 1px; }
     .info { font-size: 8px; line-height: 13px; margin-top: 3px; }
     .d { border: none; border-top: 1px dashed #000; margin: 6px 0; }
     .title { text-align: center; font-weight: bold; font-size: 10px; margin: 3px 0 1px; }
-    .onum  { text-align: center; font-size: 9px; margin-bottom: 2px; }
+    .onum  { text-align: center; font-size: 8px; margin-bottom: 2px; }
     p { font-size: 8px; line-height: 13px; margin: 1px 0; }
     .lbl { font-weight: bold; font-size: 8px; letter-spacing: .5px; margin-bottom: 2px; }
     .item-name { font-size: 8px; margin-top: 3px; }
     .item-val  { font-size: 8px; padding-left: 10px; margin-bottom: 1px; }
     .total-block { margin-top: 2px; font-size: 8px; }
     .total-block p { margin: 1px 0; }
-    .grand-total { font-weight: bold; font-size: 12px; margin-top: 4px; border-top: 1px dashed #000; padding-top: 3px; }
+    .grand-total { font-weight: bold; font-size: 11px; margin-top: 4px; border-top: 1px dashed #000; padding-top: 3px; }
     .footer { text-align: center; font-size: 7px; margin-top: 4px; line-height: 12px; }
 
     @media print {
-      @page { size: 58mm auto; margin: 1mm 2mm; }
-      body { background: #fff; padding: 0; }
+      @page { size: 58mm auto; margin: 0; }
+      body { background: #fff; padding: 2mm; }
       .receipt { width: 100%; padding: 0; }
     }
   </style>
