@@ -114,7 +114,7 @@ export async function GET(
   <meta charset="utf-8">
   <title>Cupom #${String(quote.number).padStart(4, "0")}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; word-break: break-word; }
+    * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; word-break: break-word; font-weight: bold; }
     body {
       font-family: 'Courier New', Courier, monospace;
       font-size: 9px;
