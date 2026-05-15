@@ -114,10 +114,10 @@ export async function GET(
   <meta charset="utf-8">
   <title>Cupom #${String(quote.number).padStart(4, "0")}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; word-break: break-word; font-weight: bold; }
+    * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; word-break: break-word; font-weight: 900; }
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 9px;
+      font-size: 10px;
       background: #eee;
       color: #000;
       display: flex;
@@ -130,19 +130,19 @@ export async function GET(
       padding: 8px 6px;
     }
     .center { text-align: center; }
-    h2 { font-size: 10px; font-weight: bold; line-height: 1.4; margin-bottom: 1px; }
-    .info { font-size: 8px; line-height: 13px; margin-top: 3px; }
-    .d { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-    .title { text-align: center; font-weight: bold; font-size: 10px; margin: 3px 0 1px; }
-    .onum  { text-align: center; font-size: 8px; margin-bottom: 2px; }
-    p { font-size: 8px; line-height: 13px; margin: 1px 0; }
-    .lbl { font-weight: bold; font-size: 8px; margin-bottom: 2px; }
-    .item-name { font-size: 8px; margin-top: 3px; }
-    .item-val  { font-size: 8px; padding-left: 8px; margin-bottom: 1px; }
-    .total-block { margin-top: 2px; font-size: 8px; }
-    .total-block p { margin: 1px 0; }
-    .grand-total { font-weight: bold; font-size: 10px; margin-top: 4px; border-top: 1px dashed #000; padding-top: 3px; }
-    .footer { text-align: center; font-size: 7px; margin-top: 4px; line-height: 12px; }
+    h2 { font-size: 11px; line-height: 1.4; margin-bottom: 2px; }
+    .info { font-size: 9px; line-height: 14px; margin-top: 3px; }
+    .d { border: none; border-top: 2px dashed #000; margin: 7px 0; }
+    .title { text-align: center; font-size: 11px; margin: 4px 0 2px; }
+    .onum  { text-align: center; font-size: 9px; margin-bottom: 3px; }
+    p { font-size: 9px; line-height: 14px; margin: 2px 0; }
+    .lbl { font-size: 9px; margin-bottom: 3px; letter-spacing: 0; }
+    .item-name { font-size: 9px; margin-top: 4px; }
+    .item-val  { font-size: 9px; padding-left: 8px; margin-bottom: 2px; }
+    .total-block { margin-top: 3px; font-size: 9px; }
+    .total-block p { margin: 2px 0; }
+    .grand-total { font-size: 12px; margin-top: 5px; border-top: 2px dashed #000; padding-top: 4px; }
+    .footer { text-align: center; font-size: 8px; margin-top: 5px; line-height: 13px; }
 
     @media print {
       @page { size: 58mm auto; margin: 0; }
@@ -151,17 +151,18 @@ export async function GET(
         background: #fff;
         padding: 0;
         margin: 0;
-        font-size: 7px;
+        font-size: 9px;
       }
       .receipt {
         width: 100%;
         max-width: 100%;
-        padding: 1mm 1.5mm;
+        padding: 1mm 2mm;
         margin: 0;
       }
-      h2 { font-size: 8px; }
-      .title, .onum { font-size: 7px; }
-      .grand-total { font-size: 9px; }
+      h2 { font-size: 10px; }
+      .title { font-size: 10px; }
+      .onum, p, .info, .lbl, .item-name, .item-val, .footer { font-size: 8px; }
+      .grand-total { font-size: 11px; }
     }
   </style>
 </head>
