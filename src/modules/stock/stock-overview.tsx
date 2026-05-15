@@ -116,15 +116,15 @@ export function StockOverview({ products, movements, lowStock }: StockOverviewPr
             </Button>
           </div>
 
-          <Card>
+          <Card className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Código</TableHead>
+                  <TableHead className="hidden sm:table-cell">Código</TableHead>
                   <TableHead>Produto</TableHead>
-                  <TableHead>Categoria</TableHead>
+                  <TableHead className="hidden sm:table-cell">Categoria</TableHead>
                   <TableHead className="text-center">Estoque Atual</TableHead>
-                  <TableHead className="text-center">Mínimo</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Mínimo</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="w-28"></TableHead>
                 </TableRow>
@@ -134,11 +134,11 @@ export function StockOverview({ products, movements, lowStock }: StockOverviewPr
                   const isLow = product.minimumStock > 0 && product.stock <= product.minimumStock;
                   return (
                     <TableRow key={product.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="font-mono text-xs text-muted-foreground hidden sm:table-cell">
                         {product.internalCode}
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground hidden sm:table-cell">
                         {product.category?.name ?? "—"}
                       </TableCell>
                       <TableCell className="text-center">
@@ -146,7 +146,7 @@ export function StockOverview({ products, movements, lowStock }: StockOverviewPr
                           {product.stock}
                         </span>
                       </TableCell>
-                      <TableCell className="text-center text-muted-foreground">
+                      <TableCell className="text-center text-muted-foreground hidden sm:table-cell">
                         {product.minimumStock}
                       </TableCell>
                       <TableCell className="text-center">

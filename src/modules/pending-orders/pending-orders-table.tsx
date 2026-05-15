@@ -61,7 +61,7 @@ export function PendingOrdersTable({ orders }: PendingOrdersTableProps) {
       {Object.values(grouped).map(({ product, orders }) => {
         const totalPending = orders.reduce((sum, o) => sum + (o.quantity - o.fulfilled), 0);
         return (
-          <div key={product.id} className="border border-border rounded-lg overflow-hidden">
+          <div key={product.id} className="border border-border rounded-lg overflow-x-auto">
             <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
               <div>
                 <h3 className="font-semibold text-sm">{product.name}</h3>
@@ -83,24 +83,24 @@ export function PendingOrdersTable({ orders }: PendingOrdersTableProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead className="hidden sm:table-cell">Tipo</TableHead>
                   <TableHead className="text-center">Pendente</TableHead>
-                  <TableHead className="text-center">Atendido</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Atendido</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead className="hidden sm:table-cell">Data</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.customer.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                       {order.customer.type === "DRYWALL_WORKER" ? "Gesseiro" : "Comum"}
                     </TableCell>
                     <TableCell className="text-center font-semibold text-orange-400">
                       {order.quantity - order.fulfilled}
                     </TableCell>
-                    <TableCell className="text-center text-muted-foreground">
+                    <TableCell className="text-center text-muted-foreground hidden sm:table-cell">
                       {order.fulfilled}
                     </TableCell>
                     <TableCell>
@@ -108,7 +108,7 @@ export function PendingOrdersTable({ orders }: PendingOrdersTableProps) {
                         {order.status === "PARTIAL" ? "Parcial" : "Aguardando"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
                       {format(new Date(order.createdAt), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
                   </TableRow>

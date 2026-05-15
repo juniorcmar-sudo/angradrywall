@@ -212,15 +212,15 @@ export function SalesTable({ sales }: SalesTableProps) {
         </div>
       )}
 
-      <div className="rounded-md border border-border">
+      <div className="rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Orçamento</TableHead>
               <TableHead>Cliente</TableHead>
-              <TableHead>Pagamento</TableHead>
-              <TableHead>Produtos</TableHead>
-              <TableHead>Data</TableHead>
+              <TableHead className="hidden sm:table-cell">Pagamento</TableHead>
+              <TableHead className="hidden md:table-cell">Produtos</TableHead>
+              <TableHead className="hidden sm:table-cell">Data</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,10 +243,10 @@ export function SalesTable({ sales }: SalesTableProps) {
                     </Link>
                   </TableCell>
                   <TableCell className="font-medium">{sale.customer.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                     {PAYMENT_METHOD_LABELS[sale.paymentMethod]}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="text-sm">
                       {sale.items.slice(0, 2).map((i) => (
                         <p key={i.id} className="truncate max-w-[200px]">
@@ -260,7 +260,7 @@ export function SalesTable({ sales }: SalesTableProps) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
                     {format(new Date(sale.createdAt), "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="text-right font-semibold">

@@ -86,8 +86,8 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por cliente ou número..."
@@ -96,23 +96,23 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
             className="pl-9"
           />
         </div>
-        <Link href="/orcamentos/novo">
-          <Button>
+        <Link href="/orcamentos/novo" className="flex-shrink-0">
+          <Button className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Novo Orçamento
           </Button>
         </Link>
       </div>
 
-      <div className="rounded-md border border-border">
+      <div className="rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>#</TableHead>
+              <TableHead className="w-12">#</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Pagamento</TableHead>
-              <TableHead>Validade</TableHead>
+              <TableHead className="hidden sm:table-cell">Pagamento</TableHead>
+              <TableHead className="hidden md:table-cell">Validade</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -186,10 +186,10 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
                         )}
                       </DropdownMenu>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                       {quote.paymentMethod ? PAYMENT_LABELS[quote.paymentMethod] ?? quote.paymentMethod : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                       {quote.validUntil
                         ? format(new Date(quote.validUntil), "dd/MM/yyyy", { locale: ptBR })
                         : "—"}

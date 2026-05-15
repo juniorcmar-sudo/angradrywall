@@ -83,8 +83,8 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar produtos..."
@@ -93,23 +93,23 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
             className="pl-9"
           />
         </div>
-        <Button onClick={() => setNewProductOpen(true)}>
+        <Button onClick={() => setNewProductOpen(true)} className="w-full sm:w-auto flex-shrink-0">
           <Plus className="w-4 h-4 mr-2" />
           Novo Produto
         </Button>
       </div>
 
-      <div className="rounded-md border border-border">
+      <div className="rounded-md border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
+              <TableHead className="hidden md:table-cell">Código</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Marca</TableHead>
-              <TableHead>Categoria</TableHead>
+              <TableHead className="hidden md:table-cell">Marca</TableHead>
+              <TableHead className="hidden md:table-cell">Categoria</TableHead>
               <TableHead className="text-center">Estoque</TableHead>
               <TableHead className="text-right">Preço Comum</TableHead>
-              <TableHead className="text-right">Preço Gesseiro</TableHead>
+              <TableHead className="text-right hidden md:table-cell">Preço Gesseiro</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -127,7 +127,7 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
                 const isInactive = !product.active;
                 return (
                   <TableRow key={product.id} className={isInactive ? "opacity-50" : ""}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground hidden md:table-cell">
                       {product.internalCode}
                     </TableCell>
                     <TableCell className="font-medium">
@@ -141,10 +141,10 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground hidden md:table-cell">
                       {product.brand ?? "—"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {product.category ? (
                         <Badge variant="secondary">{product.category.name}</Badge>
                       ) : (
@@ -163,7 +163,7 @@ export function ProductsTable({ products, categories, tags }: ProductsTableProps
                     <TableCell className="text-right">
                       {formatCurrency(Number(product.basePriceCommon.toString()))}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right hidden md:table-cell">
                       {formatCurrency(Number(product.basePriceDrywall.toString()))}
                     </TableCell>
                     <TableCell>
