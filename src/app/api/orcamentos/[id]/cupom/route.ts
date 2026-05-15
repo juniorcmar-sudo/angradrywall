@@ -162,7 +162,8 @@ export async function GET(
       }
       h2 { font-size: 11px; }
       .title { font-size: 11px; }
-      .onum, p, .info, .lbl, .item-name, .item-val, .footer { font-size: 9px; }
+      .onum, p, .lbl, .item-name, .item-val, .footer { font-size: 9px; }
+      .info { font-size: 8px; word-break: break-all; }
       .grand-total { font-size: 12px; }
     }
   </style>
