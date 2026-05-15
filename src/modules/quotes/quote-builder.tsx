@@ -878,7 +878,7 @@ export function QuoteBuilder({
                     <div className="space-y-1 flex-1">
                       <label className="text-xs text-muted-foreground">Número de parcelas</label>
                       <Input
-                        type="number"
+                        type="number" onFocus={(e) => e.target.select()}
                         min="1"
                         max="24"
                         placeholder="Ex: 3"
@@ -937,7 +937,7 @@ export function QuoteBuilder({
                 {showAddCredit ? (
                   <div className="flex items-center gap-2">
                     <Input
-                      type="number"
+                      type="number" onFocus={(e) => e.target.select()}
                       min="1"
                       placeholder="Parcelas"
                       value={newCreditInstallments}
@@ -946,7 +946,7 @@ export function QuoteBuilder({
                     />
                     <span className="text-xs text-muted-foreground">×</span>
                     <Input
-                      type="number"
+                      type="number" onFocus={(e) => e.target.select()}
                       step="0.01"
                       min="0"
                       placeholder="Valor R$"
@@ -1064,7 +1064,7 @@ export function QuoteBuilder({
                           −
                         </button>
                         <input
-                          type="number"
+                          type="number" onFocus={(e) => e.target.select()}
                           min={1}
                           value={item.quantity}
                           onChange={(e) => {
@@ -1205,7 +1205,7 @@ export function QuoteBuilder({
               <div className="space-y-2">
                 <Label>Desconto (R$)</Label>
                 <Input
-                  type="number"
+                  type="number" onFocus={(e) => e.target.select()}
                   step="0.01"
                   min="0"
                   value={discount || ""}

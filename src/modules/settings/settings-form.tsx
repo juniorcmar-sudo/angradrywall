@@ -106,7 +106,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
           <div className="space-y-2">
             <Label>Validade padrão dos orçamentos (dias)</Label>
             <Input
-              type="number"
+              type="number" onFocus={(e) => e.target.select()}
               min="1"
               max="30"
               {...register("quoteExpirationDays", { valueAsNumber: true })}
@@ -124,7 +124,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             <div className="space-y-2">
               <Label>Débito (%)</Label>
               <Input
-                type="number"
+                type="number" onFocus={(e) => e.target.select()}
                 step="0.01"
                 min="0"
                 {...register("debitFeePercent", { valueAsNumber: true })}
@@ -133,7 +133,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             <div className="space-y-2">
               <Label>Link de Pagamento (%)</Label>
               <Input
-                type="number"
+                type="number" onFocus={(e) => e.target.select()}
                 step="0.01"
                 min="0"
                 {...register("installmentFeePercent", { valueAsNumber: true })}

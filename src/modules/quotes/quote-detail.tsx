@@ -711,7 +711,7 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Número de parcelas</label>
                   <Input
-                    type="number"
+                    type="number" onFocus={(e) => e.target.select()}
                     min="1"
                     max="24"
                     placeholder="Ex: 3"

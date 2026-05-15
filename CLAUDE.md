@@ -253,6 +253,34 @@ Cores no histórico: verde=entrada, azul=venda, amarelo=ajuste, vermelho=perda/a
 
 ---
 
+## Contas e Deploy — CRÍTICO
+
+| Serviço | Conta | Detalhes |
+|---|---|---|
+| **GitHub** | `juniorcmar-sudo` | Repo: `juniorcmar-sudo/angradrywall` |
+| **Vercel** | `juniorcmar-1326` (`juniorcmar@gmail.com`) | Team ID: `team_WIjxGUdb2h66pUCaVkLBEiL0`, Project ID: `prj_LT97OPDVuoQ0ltBSY9OTCPhjQZyD` |
+| **Supabase** | Org: `Angra drywall vendas` | Project ID: `uyixiqymawhomkowyjwp`, região `us-west-1` |
+
+### URL de produção
+`erp-one-kappa.vercel.app` (alias `angradrywall.vercel.app` a adicionar)
+
+### Git remote
+`https://juniorcmar-sudo@github.com/juniorcmar-sudo/angradrywall.git`
+Credencial do `juniorcmar-sudo` salva no macOS Keychain — `git push origin main` funciona direto.
+
+### Fluxo de deploy
+```bash
+git add -A && git commit -m "mensagem"
+git push origin main   # Vercel detecta e faz deploy automático (~2 min)
+```
+
+### Problema de autenticação (histórico)
+- `gh` CLI local está como `Antonypimenta` — NÃO tem push no repo do Junior
+- Git credential: `juniorcmar-sudo` no macOS Keychain (configurado em 2026-05-15)
+- Se o push falhar: verificar `git remote -v` e confirmar que está com `juniorcmar-sudo@github.com/...`
+
+---
+
 ## Próximas features a implementar
 
 - Criação inline de categoria/tag no formulário de produto (`createCategory`/`createTag` foram removidos — recriar quando houver UI)

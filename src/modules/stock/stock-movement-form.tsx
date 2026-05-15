@@ -167,7 +167,7 @@ export function StockMovementForm({
         </Label>
         <Input
           id="quantity"
-          type="number"
+          type="number" onFocus={(e) => e.target.select()}
           min={isAdjustment ? "0" : "1"}
           {...register("quantity")}
         />

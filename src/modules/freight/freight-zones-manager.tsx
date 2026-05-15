@@ -173,7 +173,7 @@ export function FreightZonesManager({ zones: initialZones }: FreightZonesManager
             </div>
             <div className="space-y-2">
               <Label>Valor do Frete (R$)</Label>
-              <Input type="number" step="0.01" min="0" placeholder="50.00" {...register("price", { valueAsNumber: true })} />
+              <Input type="number" onFocus={(e) => e.target.select()} step="0.01" min="0" placeholder="50.00" {...register("price", { valueAsNumber: true })} />
               {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -219,7 +219,7 @@ export function FreightZonesManager({ zones: initialZones }: FreightZonesManager
             </div>
             <div className="space-y-2">
               <Label>Valor do Frete (R$)</Label>
-              <Input type="number" step="0.01" min="0" {...registerEdit("price", { valueAsNumber: true })} />
+              <Input type="number" onFocus={(e) => e.target.select()} step="0.01" min="0" {...registerEdit("price", { valueAsNumber: true })} />
               {editErrors.price && <p className="text-xs text-destructive">{editErrors.price.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={editSubmitting}>

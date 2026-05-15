@@ -154,7 +154,7 @@ export function ProductForm({ product, categories, tags, onSuccess }: ProductFor
           <Label htmlFor="basePriceCommon">Preço Cliente Comum (R$) *</Label>
           <Input
             id="basePriceCommon"
-            type="number"
+            type="number" onFocus={(e) => e.target.select()}
             step="0.01"
             min="0"
             placeholder="0.00"
@@ -169,7 +169,7 @@ export function ProductForm({ product, categories, tags, onSuccess }: ProductFor
           <Label htmlFor="basePriceDrywall">Preço Gesseiro (R$) *</Label>
           <Input
             id="basePriceDrywall"
-            type="number"
+            type="number" onFocus={(e) => e.target.select()}
             step="0.01"
             min="0"
             placeholder="0.00"
@@ -184,7 +184,7 @@ export function ProductForm({ product, categories, tags, onSuccess }: ProductFor
           <Label htmlFor="minimumStock">Estoque Mínimo</Label>
           <Input
             id="minimumStock"
-            type="number"
+            type="number" onFocus={(e) => e.target.select()}
             min="0"
             placeholder="0"
             {...register("minimumStock", { valueAsNumber: true })}
