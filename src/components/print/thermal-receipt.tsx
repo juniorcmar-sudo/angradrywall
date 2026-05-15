@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatCurrency, PAYMENT_METHOD_LABELS } from "@/utils/currency";
+import { formatCurrency } from "@/utils/currency";
 
 // Tipos inline para evitar importar Decimal do Prisma no componente de print
 interface ReceiptItem {
@@ -81,9 +81,17 @@ export function ThermalReceipt({ quote, settings }: ThermalReceiptProps) {
 
   // Installment display
   let installmentLine: string | null = null;
-  if (quote.paymentMethod === "LINK_3X" && quote.installments && quote.installments > 1 && quote.installmentValue) {
+  if (
+    quote.paymentMethod === "LINK_3X" &&
+    quote.installments &&
+    quote.installments > 1 &&
+    quote.installmentValue
+  ) {
     installmentLine = `${quote.installments}x de ${formatCurrency(Number(quote.installmentValue.toString()))}`;
-  } else if (quote.paymentMethod === "CREDIT" && quote.creditInstallments.length > 0) {
+  } else if (
+    quote.paymentMethod === "CREDIT" &&
+    quote.creditInstallments.length > 0
+  ) {
     const ci = quote.creditInstallments[0];
     const ciVal = Number(ci.value.toString());
     if (ci.installments > 1) {
@@ -96,310 +104,324 @@ export function ThermalReceipt({ quote, settings }: ThermalReceiptProps) {
   const companyAddress = settings?.companyAddress;
 
   return (
-    <html lang="pt-BR">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Cupom #{quote.number}</title>
-        <style>{`
-          * { box-sizing: border-box; margin: 0; padding: 0; }
+    <>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        body {
+          font-family: 'Courier New', Courier, monospace !important;
+          font-size: 10px !important;
+          background: #f0f0f0 !important;
+          color: #000 !important;
+          display: flex !important;
+          justify-content: center !important;
+          padding: 16px !important;
+          min-height: 100vh !important;
+        }
+
+        .receipt {
+          width: 290px;
+          background: #fff;
+          padding: 12px 10px;
+          color: #000;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 10px;
+        }
+
+        .top {
+          text-align: center;
+          margin-bottom: 5px;
+        }
+
+        .top h2 {
+          font-size: 13px;
+          font-weight: bold;
+          letter-spacing: 1px;
+          margin-bottom: 1px;
+        }
+
+        .top .sub {
+          font-size: 9px;
+        }
+
+        .top .info {
+          margin-top: 5px;
+          font-size: 9px;
+          line-height: 15px;
+        }
+
+        .divider {
+          border: none;
+          border-top: 1px dashed #000;
+          margin: 8px 0;
+        }
+
+        .title {
+          text-align: center;
+          font-weight: bold;
+          font-size: 12px;
+          letter-spacing: 1px;
+          margin: 4px 0 2px;
+        }
+
+        .order-num {
+          text-align: center;
+          font-size: 10px;
+          margin-bottom: 3px;
+        }
+
+        .meta p {
+          margin: 2px 0;
+          font-size: 9px;
+        }
+
+        .section-label {
+          font-weight: bold;
+          font-size: 9px;
+          letter-spacing: 1px;
+          margin-bottom: 3px;
+        }
+
+        .client p {
+          font-size: 9px;
+          margin: 2px 0;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9px;
+        }
+
+        th {
+          text-align: left;
+          border-bottom: 1px dashed #000;
+          padding-bottom: 3px;
+          font-size: 8px;
+          font-weight: bold;
+          letter-spacing: 0.5px;
+        }
+
+        th:last-child, td:last-child {
+          text-align: right;
+        }
+
+        td {
+          padding: 3px 0;
+          vertical-align: top;
+        }
+
+        td.product-name {
+          padding-right: 4px;
+        }
+
+        .totals {
+          font-size: 9px;
+        }
+
+        .totals .row {
+          display: flex;
+          justify-content: space-between;
+          margin: 2px 0;
+        }
+
+        .totals .total-row {
+          display: flex;
+          justify-content: space-between;
+          font-weight: bold;
+          font-size: 12px;
+          margin-top: 5px;
+          padding-top: 3px;
+          border-top: 1px dashed #000;
+        }
+
+        .payment p {
+          font-size: 9px;
+          margin: 2px 0;
+        }
+
+        .obs p {
+          font-size: 9px;
+          margin: 2px 0;
+          line-height: 14px;
+        }
+
+        .footer {
+          text-align: center;
+          font-size: 8px;
+          margin-top: 5px;
+          line-height: 14px;
+        }
+
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 3mm;
+          }
           body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            background: #f0f0f0;
-            color: #000;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
+            background: #fff !important;
+            padding: 0 !important;
           }
-
           .receipt {
-            width: 300px;
-            background: #fff;
-            padding: 14px 12px;
-            color: #000;
-          }
-
-          .top {
-            text-align: center;
-            margin-bottom: 6px;
-          }
-
-          .top h2 {
-            font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-bottom: 2px;
-          }
-
-          .top .sub {
-            font-size: 11px;
-          }
-
-          .top .info {
-            margin-top: 6px;
-            font-size: 11px;
-            line-height: 17px;
-          }
-
-          .divider {
-            border: none;
-            border-top: 1px dashed #000;
-            margin: 10px 0;
-          }
-
-          .title {
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
-            letter-spacing: 1px;
-            margin: 6px 0 2px;
-          }
-
-          .order-num {
-            text-align: center;
-            font-size: 13px;
-            margin-bottom: 4px;
-          }
-
-          .meta p {
-            margin: 3px 0;
-            font-size: 11px;
-          }
-
-          .section-label {
-            font-weight: bold;
-            font-size: 11px;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-          }
-
-          .client p {
-            font-size: 11px;
-            margin: 3px 0;
-          }
-
-          table {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
+            padding: 0;
+            box-shadow: none;
           }
+        }
+      `}</style>
 
-          th {
-            text-align: left;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-          }
+      <div className="receipt">
+        {/* Cabeçalho */}
+        <div className="top">
+          <h2>{companyName.toUpperCase()}</h2>
+          <div className="sub">DISTRIBUIDORA</div>
+          {(companyPhone || companyAddress) && (
+            <div className="info">
+              {companyPhone && <div>Tel: {companyPhone}</div>}
+              {companyAddress && <div>{companyAddress}</div>}
+            </div>
+          )}
+        </div>
 
-          th:last-child, td:last-child {
-            text-align: right;
-          }
+        <hr className="divider" />
 
-          td {
-            padding: 4px 0;
-            vertical-align: top;
-          }
+        {/* Título */}
+        <div className="title">{isPaid ? "FECHAMENTO DE CONTA" : "ORÇAMENTO"}</div>
+        <div className="order-num">
+          ORÇAMENTO {String(quote.number).padStart(4, "0")}
+        </div>
 
-          td.product-name {
-            padding-right: 4px;
-          }
+        {/* Meta */}
+        <div className="meta">
+          <p>Data: {dateStr}</p>
+          <p>Hora: {timeStr}</p>
+        </div>
 
-          .totals {
-            font-size: 11px;
-          }
+        <hr className="divider" />
 
-          .totals .row {
-            display: flex;
-            justify-content: space-between;
-            margin: 3px 0;
-          }
+        {/* Cliente */}
+        <div className="client">
+          <div className="section-label">CLIENTE</div>
+          <p>{quote.customer.name}</p>
+          {quote.customer.phone1 && <p>Tel: {quote.customer.phone1}</p>}
+          {(quote.customer.cidade || quote.customer.uf) && (
+            <p>
+              {[quote.customer.cidade, quote.customer.uf]
+                .filter(Boolean)
+                .join("/")}
+            </p>
+          )}
+        </div>
 
-          .totals .total-row {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            font-size: 14px;
-            margin-top: 6px;
-            padding-top: 4px;
-            border-top: 1px dashed #000;
-          }
+        <hr className="divider" />
 
-          .payment p {
-            font-size: 11px;
-            margin: 3px 0;
-          }
-
-          .obs p {
-            font-size: 11px;
-            margin: 3px 0;
-            line-height: 16px;
-          }
-
-          .footer {
-            text-align: center;
-            font-size: 10px;
-            margin-top: 6px;
-            line-height: 16px;
-          }
-
-          @media print {
-            @page {
-              size: 80mm auto;
-              margin: 3mm;
-            }
-            body {
-              background: #fff;
-              padding: 0;
-            }
-            .receipt {
-              width: 100%;
-              padding: 0;
-              box-shadow: none;
-            }
-          }
-        `}</style>
-      </head>
-      <body>
-        <div className="receipt">
-          {/* Cabeçalho */}
-          <div className="top">
-            <h2>{companyName.toUpperCase()}</h2>
-            <div className="sub">DISTRIBUIDORA</div>
-            {(companyPhone || companyAddress) && (
-              <div className="info">
-                {companyPhone && <div>Tel: {companyPhone}</div>}
-                {companyAddress && <div>{companyAddress}</div>}
-              </div>
-            )}
-          </div>
-
-          <hr className="divider" />
-
-          {/* Título */}
-          <div className="title">{isPaid ? "FECHAMENTO DE CONTA" : "ORÇAMENTO"}</div>
-          <div className="order-num">ORÇAMENTO {String(quote.number).padStart(4, "0")}</div>
-
-          {/* Meta */}
-          <div className="meta">
-            <p>Data: {dateStr}</p>
-            <p>Hora: {timeStr}</p>
-          </div>
-
-          <hr className="divider" />
-
-          {/* Cliente */}
-          <div className="client">
-            <div className="section-label">CLIENTE</div>
-            <p>{quote.customer.name}</p>
-            {quote.customer.phone1 && <p>Tel: {quote.customer.phone1}</p>}
-            {(quote.customer.cidade || quote.customer.uf) && (
-              <p>
-                {[quote.customer.cidade, quote.customer.uf].filter(Boolean).join("/")}
-              </p>
-            )}
-          </div>
-
-          <hr className="divider" />
-
-          {/* Itens */}
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: "30px" }}>QTD</th>
-                <th>PRODUTO</th>
-                <th>VALOR</th>
+        {/* Itens */}
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: "28px" }}>QTD</th>
+              <th>PRODUTO</th>
+              <th>VALOR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quote.items.map((item, i) => (
+              <tr key={i}>
+                <td>{item.quantity}</td>
+                <td className="product-name">{item.product.name}</td>
+                <td>{formatCurrency(Number(item.finalPrice.toString()))}</td>
               </tr>
-            </thead>
-            <tbody>
-              {quote.items.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.quantity}</td>
-                  <td className="product-name">{item.product.name}</td>
-                  <td>{formatCurrency(Number(item.finalPrice.toString()))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </tbody>
+        </table>
 
-          <hr className="divider" />
+        <hr className="divider" />
 
-          {/* Totais */}
-          <div className="totals">
-            <div className="row">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="row">
-                <span>Desconto:</span>
-                <span>- {formatCurrency(discount)}</span>
-              </div>
-            )}
-            {freight > 0 && (
-              <div className="row">
-                <span>Frete:</span>
-                <span>{formatCurrency(freight)}</span>
-              </div>
-            )}
-            <div className="total-row">
-              <span>TOTAL:</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
+        {/* Totais */}
+        <div className="totals">
+          <div className="row">
+            <span>Subtotal:</span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
-
-          {/* Pagamento */}
-          {payLabel && (
-            <>
-              <hr className="divider" />
-              <div className="payment">
-                <div className="section-label">PAGAMENTO</div>
-                <p>{payLabel}</p>
-                {installmentLine && <p>{installmentLine}</p>}
-                {isPaid && (
-                  <p>Pago em: {dateStr} às {timeStr}</p>
-                )}
-                {!isPaid && quote.validUntil && (
-                  <p>Vencimento: {format(new Date(quote.validUntil), "dd/MM/yyyy", { locale: ptBR })}</p>
-                )}
-              </div>
-            </>
+          {discount > 0 && (
+            <div className="row">
+              <span>Desconto:</span>
+              <span>- {formatCurrency(discount)}</span>
+            </div>
           )}
-
-          {/* Validade (se não pago e sem método definido) */}
-          {!isPaid && !payLabel && quote.validUntil && (
-            <>
-              <hr className="divider" />
-              <div className="obs">
-                <div className="section-label">VALIDADE</div>
-                <p>Proposta válida até: {format(new Date(quote.validUntil), "dd/MM/yyyy", { locale: ptBR })}</p>
-              </div>
-            </>
+          {freight > 0 && (
+            <div className="row">
+              <span>Frete:</span>
+              <span>{formatCurrency(freight)}</span>
+            </div>
           )}
-
-          {/* Observações */}
-          {quote.customerNotes && (
-            <>
-              <hr className="divider" />
-              <div className="obs">
-                <div className="section-label">OBSERVAÇÕES</div>
-                <p>{quote.customerNotes}</p>
-              </div>
-            </>
-          )}
-
-          <hr className="divider" />
-
-          {/* Rodapé */}
-          <div className="footer">
-            Obrigado pela preferência!<br />
-            erp-one-kappa.vercel.app
+          <div className="total-row">
+            <span>TOTAL:</span>
+            <span>{formatCurrency(total)}</span>
           </div>
         </div>
-      </body>
-    </html>
+
+        {/* Pagamento */}
+        {payLabel && (
+          <>
+            <hr className="divider" />
+            <div className="payment">
+              <div className="section-label">PAGAMENTO</div>
+              <p>{payLabel}</p>
+              {installmentLine && <p>{installmentLine}</p>}
+              {isPaid && (
+                <p>
+                  Pago em: {dateStr} às {timeStr}
+                </p>
+              )}
+              {!isPaid && quote.validUntil && (
+                <p>
+                  Vencimento:{" "}
+                  {format(new Date(quote.validUntil), "dd/MM/yyyy", {
+                    locale: ptBR,
+                  })}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Validade (se não pago e sem método definido) */}
+        {!isPaid && !payLabel && quote.validUntil && (
+          <>
+            <hr className="divider" />
+            <div className="obs">
+              <div className="section-label">VALIDADE</div>
+              <p>
+                Proposta válida até:{" "}
+                {format(new Date(quote.validUntil), "dd/MM/yyyy", {
+                  locale: ptBR,
+                })}
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* Observações */}
+        {quote.customerNotes && (
+          <>
+            <hr className="divider" />
+            <div className="obs">
+              <div className="section-label">OBSERVAÇÕES</div>
+              <p>{quote.customerNotes}</p>
+            </div>
+          </>
+        )}
+
+        <hr className="divider" />
+
+        {/* Rodapé */}
+        <div className="footer">
+          Obrigado pela preferência!
+          <br />
+          erp-one-kappa.vercel.app
+        </div>
+      </div>
+    </>
   );
 }
