@@ -207,7 +207,7 @@ export async function GET(
 
     <hr class="d">
 
-    <div class="footer">Obrigado pela preferencia!<br>erp-one-kappa.vercel.app</div>
+    <div class="footer">Obrigado pela preferencia!<br>angradrywall.vercel.app</div>
   </div>
 
   <script>
