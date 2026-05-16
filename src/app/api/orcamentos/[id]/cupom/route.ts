@@ -179,7 +179,7 @@ export async function GET(
 
     <hr class="d">
 
-    <div class="title">${isPaid ? "FECHAMENTO DE CONTA" : "ORCAMENTO"}</div>
+    <div class="title">${isPaid ? "COMPROVANTE DE COMPRA" : "ORCAMENTO"}</div>
     <div class="onum">ORCAMENTO ${String(quote.number).padStart(4, "0")}</div>
     <p>Data: ${dateStr} &nbsp; Hora: ${timeStr}</p>
 
