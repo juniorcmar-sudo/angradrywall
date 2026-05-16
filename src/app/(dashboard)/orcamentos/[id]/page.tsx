@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { getQuoteById } from "@/modules/quotes/actions";
+import { getQuoteById, getQuoteTimeline } from "@/modules/quotes/actions";
 import { getSettings } from "@/modules/settings/actions";
 import { QuoteDetail } from "@/modules/quotes/quote-detail";
 import { serialize } from "@/utils/serialize";
@@ -11,8 +11,8 @@ interface Props {
 
 export default async function QuotePage({ params }: Props) {
   const { id } = await params;
-  const [quote, settings] = serialize(
-    await Promise.all([getQuoteById(id), getSettings()])
+  const [quote, settings, timeline] = serialize(
+    await Promise.all([getQuoteById(id), getSettings(), getQuoteTimeline(id)])
   );
 
   if (!quote) notFound();
@@ -34,6 +34,7 @@ export default async function QuotePage({ params }: Props) {
           signatureText={settings?.signatureText ?? undefined}
           debitFeePercent={settings?.debitFeePercent ? Number(settings.debitFeePercent) : 1.99}
           linkFeePercent={settings?.installmentFeePercent ? Number(settings.installmentFeePercent) : 12.71}
+          timeline={timeline}
         />
       </div>
     </div>

@@ -40,6 +40,7 @@ import {
   Trash2,
   ChevronDown,
   Printer,
+  History,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -80,6 +81,13 @@ type QuoteWithDetails = Quote & {
   creditInstallments: QuoteCreditInstallment[];
 };
 
+interface TimelineEntry {
+  id: string;
+  action: string;
+  description: string | null;
+  createdAt: string | Date;
+}
+
 interface QuoteDetailProps {
   quote: QuoteWithDetails;
   companyName?: string;
@@ -90,9 +98,19 @@ interface QuoteDetailProps {
   signatureText?: string;
   debitFeePercent?: number;
   linkFeePercent?: number;
+  timeline?: TimelineEntry[];
 }
 
-export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, companyCnpj, companyEmail, signatureText, debitFeePercent = 1.99, linkFeePercent = 12.71 }: QuoteDetailProps) {
+const TIMELINE_CONFIG: Record<string, { label: string; color: string }> = {
+  CRIADO:             { label: "Criado",               color: "bg-gray-400" },
+  SENT:               { label: "Enviado",              color: "bg-blue-500" },
+  AWAITING_PAYMENT:   { label: "Aguard. Pagamento",    color: "bg-amber-500" },
+  PAID:               { label: "Pago",                 color: "bg-emerald-500" },
+  CANCELLED:          { label: "Cancelado",            color: "bg-red-500" },
+  DRAFT:              { label: "Reaberto",             color: "bg-gray-400" },
+};
+
+export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, companyCnpj, companyEmail, signatureText, debitFeePercent = 1.99, linkFeePercent = 12.71, timeline = [] }: QuoteDetailProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -751,6 +769,49 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Histórico */}
+      {timeline.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="w-4 h-4 text-muted-foreground" />
+              Histórico
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative pl-5">
+              {/* linha vertical */}
+              <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+
+              <div className="space-y-4">
+                {timeline.map((event, i) => {
+                  const cfg = TIMELINE_CONFIG[event.action] ?? { label: event.action, color: "bg-gray-400" };
+                  const date = new Date(event.createdAt);
+                  const isLast = i === timeline.length - 1;
+                  return (
+                    <div key={event.id} className="relative flex gap-3">
+                      {/* dot */}
+                      <div className={`absolute -left-5 mt-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${cfg.color} ${isLast ? "ring-2 ring-offset-1 ring-offset-background ring-primary/30" : ""}`} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold">{cfg.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   );

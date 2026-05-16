@@ -81,6 +81,15 @@ export async function createQuote(
       },
     });
 
+    await prisma.timelineEvent.create({
+      data: {
+        entityType: "QUOTE",
+        entityId: quote.id,
+        action: "CRIADO",
+        description: "Orçamento criado",
+      },
+    });
+
     revalidatePath("/orcamentos");
     return { success: true, data: { id: quote.id } };
   } catch {
@@ -114,6 +123,23 @@ export async function updateQuoteStatus(
     if (status === "CANCELLED") updates.cancelledAt = new Date();
 
     await prisma.quote.update({ where: { id }, data: updates });
+
+    const STATUS_DESCRIPTIONS: Partial<Record<QuoteStatus, string>> = {
+      SENT: "Orçamento enviado ao cliente",
+      AWAITING_PAYMENT: "Aguardando pagamento",
+      PAID: "Pagamento confirmado",
+      CANCELLED: "Orçamento cancelado",
+      DRAFT: "Orçamento reaberto como rascunho",
+    };
+    await prisma.timelineEvent.create({
+      data: {
+        entityType: "QUOTE",
+        entityId: id,
+        action: status,
+        description: STATUS_DESCRIPTIONS[status] ?? status,
+      },
+    });
+
     revalidatePath("/orcamentos");
     revalidatePath(`/orcamentos/${id}`);
     revalidatePath("/dashboard");
@@ -394,6 +420,15 @@ export async function duplicateQuote(id: string): Promise<ActionResult<{ id: str
       },
     });
 
+    await prisma.timelineEvent.create({
+      data: {
+        entityType: "QUOTE",
+        entityId: copy.id,
+        action: "CRIADO",
+        description: `Duplicado do orçamento #${String(original.number).padStart(4, "0")}`,
+      },
+    });
+
     revalidatePath("/orcamentos");
     return { success: true, data: { id: copy.id } };
   } catch {
@@ -422,5 +457,12 @@ export async function getQuoteById(id: string) {
       items: { include: { product: { include: { category: true } } } },
       creditInstallments: { orderBy: { sortOrder: "asc" } },
     },
+  });
+}
+
+export async function getQuoteTimeline(quoteId: string) {
+  return prisma.timelineEvent.findMany({
+    where: { entityType: "QUOTE", entityId: quoteId },
+    orderBy: { createdAt: "asc" },
   });
 }
