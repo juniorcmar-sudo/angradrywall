@@ -353,6 +353,7 @@ model Settings {
   companyEmail          String?  @map("company_email")
   companyPhone          String?  @map("company_phone")
   companyAddress        String?  @map("company_address")
+  companyLogo           String?  @map("company_logo")
   signatureText         String?  @map("signature_text")
   quoteExpirationDays   Int      @default(3) @map("quote_expiration_days")
   creditFeePercent      Decimal  @default(4.99) @map("credit_fee_percent") @db.Decimal(5, 2)

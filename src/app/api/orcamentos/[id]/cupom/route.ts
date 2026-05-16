@@ -157,7 +157,7 @@ export async function GET(
       .receipt {
         width: 100%;
         max-width: 100%;
-        padding: 1mm 2mm;
+        padding: 1mm 2mm 12mm;
         margin: 0;
       }
       h2 { font-size: 11px; }
@@ -173,6 +173,7 @@ export async function GET(
 
     <div class="center">
       <h2>${companyName}</h2>
+      ${settings?.companyLogo ? `<div class="logo-wrap"><img src="${settings.companyLogo}" alt="Logo" style="max-width:80px;max-height:40px;display:block;margin:4px auto 0;"></div>` : ""}
       ${companyPhone || companyAddress ? `<div class="info">${companyPhone ? `Tel: ${esc(companyPhone)}<br>` : ""}${companyAddress ? esc(companyAddress) : ""}</div>` : ""}
     </div>
 

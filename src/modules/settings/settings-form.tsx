@@ -3,13 +3,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { saveSettings } from "./actions";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import type { Settings } from "@/types";
 
 const schema = z.object({
@@ -18,6 +19,7 @@ const schema = z.object({
   companyEmail: z.string().optional(),
   companyPhone: z.string().optional(),
   companyAddress: z.string().optional(),
+  companyLogo: z.string().optional(),
   signatureText: z.string().optional(),
   quoteExpirationDays: z.number().int().min(1).max(30),
   debitFeePercent: z.number().min(0),
@@ -31,9 +33,15 @@ interface SettingsFormProps {
 }
 
 export function SettingsForm({ settings }: SettingsFormProps) {
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    (settings as Settings & { companyLogo?: string | null })?.companyLogo ?? null
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -43,12 +51,31 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       companyEmail: settings?.companyEmail ?? "",
       companyPhone: settings?.companyPhone ?? "",
       companyAddress: settings?.companyAddress ?? "",
+      companyLogo: (settings as Settings & { companyLogo?: string | null })?.companyLogo ?? "",
       signatureText: settings?.signatureText ?? "",
       quoteExpirationDays: settings?.quoteExpirationDays ?? 3,
       debitFeePercent: settings ? Number(settings.debitFeePercent.toString()) : 1.99,
       installmentFeePercent: settings ? Number(settings.installmentFeePercent.toString()) : 12.71,
     },
   });
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setLogoPreview(base64);
+      setValue("companyLogo", base64);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleLogoRemove() {
+    setLogoPreview(null);
+    setValue("companyLogo", "");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function onSubmit(data: FormData) {
     const result = await saveSettings(data);
@@ -90,6 +117,39 @@ export function SettingsForm({ settings }: SettingsFormProps) {
           <div className="space-y-2">
             <Label>Endereço</Label>
             <Input placeholder="Rua, número, bairro, cidade" {...register("companyAddress")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Logo da Empresa</Label>
+            {logoPreview ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={logoPreview}
+                  alt="Logo"
+                  className="h-12 object-contain border rounded p-1 bg-white"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogoRemove}
+                  className="gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Remover
+                </Button>
+              </div>
+            ) : (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-muted file:text-foreground hover:file:bg-muted/80 cursor-pointer"
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              A logo aparece no cupom térmico. Recomendado: PNG ou JPG, fundo transparente ou branco.
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Assinatura no PDF</Label>

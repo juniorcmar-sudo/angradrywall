@@ -11,6 +11,7 @@ const settingsSchema = z.object({
   companyEmail: z.string().optional(),
   companyPhone: z.string().optional(),
   companyAddress: z.string().optional(),
+  companyLogo: z.string().optional(),
   signatureText: z.string().optional(),
   quoteExpirationDays: z.coerce.number().int().min(1).max(30),
   debitFeePercent: z.coerce.number().min(0),
