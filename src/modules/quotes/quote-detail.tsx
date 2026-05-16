@@ -308,29 +308,6 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
               Editar
             </Button>
           )}
-          <PDFDownloadButton
-            quote={quote}
-            companyName={companyName}
-            companyPhone={companyPhone}
-            companyAddress={companyAddress}
-            companyCnpj={companyCnpj}
-            companyEmail={companyEmail}
-            signatureText={signatureText}
-            debitFeePercent={debitFeePercent}
-            linkFeePercent={linkFeePercent}
-            creditInstallments={quote.creditInstallments.map((ci) => ({
-              installments: ci.installments,
-              value: Number(ci.value.toString()),
-            }))}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
-          >
-            <Printer className="w-3.5 h-3.5 mr-1" />
-            Imprimir
-          </Button>
           <Button variant="outline" size="sm" onClick={handleDuplicate}>
             <FileText className="w-3.5 h-3.5 mr-1" />
             Duplicar
@@ -601,8 +578,7 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             <CardContent className="pt-4 pb-4">
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  variant="outline"
-                  className="w-full"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
                   onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
                 >
                   <Printer className="w-4 h-4 mr-2" />
@@ -623,6 +599,7 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
                     value: Number(ci.value.toString()),
                   }))}
                   className="w-full"
+                  buttonClassName="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
                   size="default"
                 />
               </div>

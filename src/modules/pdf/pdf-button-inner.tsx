@@ -13,6 +13,7 @@ type Props = Omit<QuotePDFProps, "logoUrl"> & {
   linkFeePercent?: number;
   creditInstallments?: CreditInstallmentProp[];
   className?: string;
+  buttonClassName?: string;
   size?: "sm" | "default" | "lg" | "icon";
 };
 
@@ -30,6 +31,7 @@ export function PDFButtonInner({
   linkFeePercent,
   creditInstallments,
   className,
+  buttonClassName,
   size = "sm",
 }: Props) {
   return (
@@ -53,7 +55,7 @@ export function PDFButtonInner({
       className={className}
     >
       {({ loading }) => (
-        <Button variant="outline" size={size} disabled={loading} className={className ? "w-full" : undefined}>
+        <Button variant="outline" size={size} disabled={loading} className={buttonClassName ?? (className ? "w-full" : undefined)}>
           {loading ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (

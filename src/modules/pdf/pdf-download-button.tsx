@@ -23,6 +23,7 @@ type PDFDownloadButtonProps = Omit<QuotePDFProps, "logoUrl"> & {
   linkFeePercent?: number;
   creditInstallments?: CreditInstallmentProp[];
   className?: string;
+  buttonClassName?: string;
   size?: "sm" | "default" | "lg" | "icon";
 };
 
@@ -38,6 +39,7 @@ export function PDFDownloadButton({
   linkFeePercent,
   creditInstallments,
   className,
+  buttonClassName,
   size,
 }: PDFDownloadButtonProps) {
   const logoUrl =
@@ -60,6 +62,7 @@ export function PDFDownloadButton({
       linkFeePercent={linkFeePercent}
       creditInstallments={creditInstallments}
       className={className}
+      buttonClassName={buttonClassName}
       size={size}
     />
   );
