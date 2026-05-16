@@ -596,51 +596,35 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             </CardContent>
           </Card>
 
-          {/* Pagamento card */}
+          {/* Card de ações rápidas — Imprimir + Baixar PDF */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Pagamento</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-sm">
-                    {quote.paymentMethod
-                      ? PAYMENT_METHOD_LABELS[quote.paymentMethod]
-                      : <span className="text-muted-foreground italic text-xs">Não definido</span>}
-                  </p>
-                  {quote.installments && quote.installments > 1 && quote.installmentValue && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {quote.installments}x de {formatCurrency(Number(quote.installmentValue.toString()))}
-                    </p>
-                  )}
-                  {quote.installments === 1 && quote.paymentMethod === "LINK_3X" && (
-                    <p className="text-xs text-muted-foreground mt-0.5">À vista</p>
-                  )}
-                  {quote.paymentMethod === "CREDIT" && quote.creditInstallments.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
-                      {quote.creditInstallments.map((ci) => (
-                        <p key={ci.id} className="text-xs text-muted-foreground">
-                          {ci.installments === 1 ? "À vista" : `${ci.installments}x`} de {formatCurrency(Number(ci.value.toString()))}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {!isPaid && !isCancelled && quote.paymentMethod && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => {
-                      setChangeMethod(quote.paymentMethod ?? "");
-                      setChangeInstallments(quote.installments ?? 1);
-                      setChangePayOpen(true);
-                    }}
-                  >
-                    Alterar
-                  </Button>
-                )}
+            <CardContent className="pt-4 pb-4">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir
+                </Button>
+                <PDFDownloadButton
+                  quote={quote}
+                  companyName={companyName}
+                  companyPhone={companyPhone}
+                  companyAddress={companyAddress}
+                  companyCnpj={companyCnpj}
+                  companyEmail={companyEmail}
+                  signatureText={signatureText}
+                  debitFeePercent={debitFeePercent}
+                  linkFeePercent={linkFeePercent}
+                  creditInstallments={quote.creditInstallments.map((ci) => ({
+                    installments: ci.installments,
+                    value: Number(ci.value.toString()),
+                  }))}
+                  className="w-full"
+                  size="default"
+                />
               </div>
             </CardContent>
           </Card>

@@ -22,6 +22,8 @@ type PDFDownloadButtonProps = Omit<QuotePDFProps, "logoUrl"> & {
   debitFeePercent?: number;
   linkFeePercent?: number;
   creditInstallments?: CreditInstallmentProp[];
+  className?: string;
+  size?: "sm" | "default" | "lg" | "icon";
 };
 
 export function PDFDownloadButton({
@@ -35,6 +37,8 @@ export function PDFDownloadButton({
   debitFeePercent,
   linkFeePercent,
   creditInstallments,
+  className,
+  size,
 }: PDFDownloadButtonProps) {
   const logoUrl =
     typeof window !== "undefined"
@@ -55,6 +59,8 @@ export function PDFDownloadButton({
       debitFeePercent={debitFeePercent}
       linkFeePercent={linkFeePercent}
       creditInstallments={creditInstallments}
+      className={className}
+      size={size}
     />
   );
 }

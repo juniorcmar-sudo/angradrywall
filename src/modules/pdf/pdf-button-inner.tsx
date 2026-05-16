@@ -12,6 +12,8 @@ type Props = Omit<QuotePDFProps, "logoUrl"> & {
   debitFeePercent?: number;
   linkFeePercent?: number;
   creditInstallments?: CreditInstallmentProp[];
+  className?: string;
+  size?: "sm" | "default" | "lg" | "icon";
 };
 
 export function PDFButtonInner({
@@ -27,6 +29,8 @@ export function PDFButtonInner({
   debitFeePercent,
   linkFeePercent,
   creditInstallments,
+  className,
+  size = "sm",
 }: Props) {
   return (
     <PDFDownloadLink
@@ -46,15 +50,16 @@ export function PDFButtonInner({
         />
       }
       fileName={fileName}
+      className={className}
     >
       {({ loading }) => (
-        <Button variant="outline" size="sm" disabled={loading}>
+        <Button variant="outline" size={size} disabled={loading} className={className ? "w-full" : undefined}>
           {loading ? (
-            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
-            <FileDown className="w-3.5 h-3.5 mr-1" />
+            <FileDown className="w-4 h-4 mr-2" />
           )}
-          {loading ? "Gerando PDF..." : "Baixar PDF"}
+          {loading ? "Gerando..." : "Baixar PDF"}
         </Button>
       )}
     </PDFDownloadLink>
