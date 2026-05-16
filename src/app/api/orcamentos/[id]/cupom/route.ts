@@ -128,22 +128,22 @@ export async function GET(
     .receipt {
       width: 200px;
       background: #fff;
-      padding: 8px 6px;
+      padding: 12px 10px;
     }
     .center { text-align: center; }
-    h2 { font-size: 12px; line-height: 1.4; margin-bottom: 2px; }
-    .info { font-size: 10px; line-height: 15px; margin-top: 3px; }
-    .d { border: none; border-top: 2px dashed #000; margin: 7px 0; }
-    .title { text-align: center; font-size: 12px; margin: 4px 0 2px; }
-    .onum  { text-align: center; font-size: 10px; margin-bottom: 3px; }
-    p { font-size: 10px; line-height: 15px; margin: 2px 0; }
-    .lbl { font-size: 10px; margin-bottom: 3px; letter-spacing: 0; }
-    .item-name { font-size: 10px; margin-top: 4px; }
-    .item-val  { font-size: 10px; padding-left: 8px; margin-bottom: 2px; }
-    .total-block { margin-top: 3px; font-size: 10px; }
-    .total-block p { margin: 2px 0; }
-    .grand-total { font-size: 13px; margin-top: 5px; border-top: 2px dashed #000; padding-top: 4px; }
-    .footer { text-align: center; font-size: 9px; margin-top: 5px; line-height: 14px; }
+    h2 { font-size: 12px; line-height: 1.5; margin-bottom: 4px; }
+    .info { font-size: 10px; line-height: 17px; margin-top: 5px; }
+    .d { border: none; border-top: 2px dashed #000; margin: 10px 0; }
+    .title { text-align: center; font-size: 12px; margin: 6px 0 3px; }
+    .onum  { text-align: center; font-size: 10px; margin-bottom: 5px; }
+    p { font-size: 10px; line-height: 17px; margin: 3px 0; }
+    .lbl { font-size: 10px; margin-bottom: 5px; letter-spacing: 0; }
+    .item-name { font-size: 10px; margin-top: 7px; }
+    .item-val  { font-size: 10px; padding-left: 10px; margin-bottom: 4px; }
+    .total-block { margin-top: 5px; font-size: 10px; }
+    .total-block p { margin: 4px 0; }
+    .grand-total { font-size: 13px; margin-top: 8px; border-top: 2px dashed #000; padding-top: 6px; }
+    .footer { text-align: center; font-size: 9px; margin-top: 8px; line-height: 16px; }
 
     @media print {
       @page { size: 58mm auto; margin: 0; }
@@ -157,7 +157,7 @@ export async function GET(
       .receipt {
         width: 100%;
         max-width: 100%;
-        padding: 1mm 2mm 12mm;
+        padding: 2mm 2.5mm 14mm;
         margin: 0;
       }
       h2 { font-size: 11px; }
@@ -173,7 +173,7 @@ export async function GET(
 
     <div class="center">
       <h2>${companyName}</h2>
-      ${settings?.companyLogo ? `<div class="logo-wrap"><img src="${settings.companyLogo}" alt="Logo" style="max-width:80px;max-height:40px;display:block;margin:4px auto 0;"></div>` : ""}
+      ${settings?.companyLogo ? `<div class="logo-wrap"><img src="${settings.companyLogo}" alt="Logo" style="max-width:80px;max-height:40px;display:block;margin:6px auto 2px;filter:grayscale(100%) contrast(120%);"></div>` : ""}
       ${companyPhone || companyAddress ? `<div class="info">${companyPhone ? `Tel: ${esc(companyPhone)}<br>` : ""}${companyAddress ? esc(companyAddress) : ""}</div>` : ""}
     </div>
 
