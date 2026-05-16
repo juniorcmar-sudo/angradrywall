@@ -39,6 +39,7 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
+  ChevronUp,
   Printer,
   History,
 } from "lucide-react";
@@ -114,6 +115,7 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Change payment method (editable until PAID)
   const [changePayOpen, setChangePayOpen] = useState(false);
   const [changeMethod, setChangeMethod] = useState<string>(quote.paymentMethod ?? "");
@@ -297,58 +299,60 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
       </div>
 
       {/* Action bar */}
-      <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-border">
-        {/* Tools */}
-        {canEdit && (
-          <Button variant="outline" size="sm" onClick={() => router.push(`/orcamentos/${quote.id}/editar`)}>
-            <Pencil className="w-3.5 h-3.5 mr-1" />
-            Editar
+      <div className="flex flex-col gap-2 pb-2 border-b border-border">
+        {/* Linha 1 — ferramentas */}
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => router.push(`/orcamentos/${quote.id}/editar`)}>
+              <Pencil className="w-3.5 h-3.5 mr-1" />
+              Editar
+            </Button>
+          )}
+          <PDFDownloadButton
+            quote={quote}
+            companyName={companyName}
+            companyPhone={companyPhone}
+            companyAddress={companyAddress}
+            companyCnpj={companyCnpj}
+            companyEmail={companyEmail}
+            signatureText={signatureText}
+            debitFeePercent={debitFeePercent}
+            linkFeePercent={linkFeePercent}
+            creditInstallments={quote.creditInstallments.map((ci) => ({
+              installments: ci.installments,
+              value: Number(ci.value.toString()),
+            }))}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
+          >
+            <Printer className="w-3.5 h-3.5 mr-1" />
+            Imprimir
           </Button>
-        )}
-        <PDFDownloadButton
-          quote={quote}
-          companyName={companyName}
-          companyPhone={companyPhone}
-          companyAddress={companyAddress}
-          companyCnpj={companyCnpj}
-          companyEmail={companyEmail}
-          signatureText={signatureText}
-          debitFeePercent={debitFeePercent}
-          linkFeePercent={linkFeePercent}
-          creditInstallments={quote.creditInstallments.map((ci) => ({
-            installments: ci.installments,
-            value: Number(ci.value.toString()),
-          }))}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
-        >
-          <Printer className="w-3.5 h-3.5 mr-1" />
-          Imprimir
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleDuplicate}>
-          <FileText className="w-3.5 h-3.5 mr-1" />
-          Duplicar
-        </Button>
-        <Button variant="outline" size="sm" onClick={copyWhatsAppMessage}>
-          <Copy className="w-3.5 h-3.5 mr-1" />
-          Copiar msg
-        </Button>
-        <Button variant="outline" size="sm" onClick={openWhatsApp}>
-          <MessageCircle className="w-3.5 h-3.5 mr-1" />
-          WhatsApp
-        </Button>
-        {quote.status === "AWAITING_PAYMENT" && (
-          <Button variant="outline" size="sm" onClick={copyPaymentMessage}>
+          <Button variant="outline" size="sm" onClick={handleDuplicate}>
+            <FileText className="w-3.5 h-3.5 mr-1" />
+            Duplicar
+          </Button>
+          <Button variant="outline" size="sm" onClick={copyWhatsAppMessage}>
             <Copy className="w-3.5 h-3.5 mr-1" />
-            Mensagem Pgto
+            Copiar msg
           </Button>
-        )}
+          <Button variant="outline" size="sm" onClick={openWhatsApp}>
+            <MessageCircle className="w-3.5 h-3.5 mr-1" />
+            WhatsApp
+          </Button>
+          {quote.status === "AWAITING_PAYMENT" && (
+            <Button variant="outline" size="sm" onClick={copyPaymentMessage}>
+              <Copy className="w-3.5 h-3.5 mr-1" />
+              Mensagem Pgto
+            </Button>
+          )}
+        </div>
 
-        {/* Stage action — pushed to right */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* Linha 2 — ações de etapa */}
+        <div className="flex items-center gap-2">
           {/* Cancel */}
           {!isPaid && !isCancelled && (
             <Button
@@ -771,47 +775,91 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
       </Dialog>
 
       {/* Histórico */}
-      {timeline.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <History className="w-4 h-4 text-muted-foreground" />
-              Histórico
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative pl-5">
-              {/* linha vertical */}
-              <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+      {(() => {
+        // Garante sempre um evento "Criado" baseado em quote.createdAt
+        // caso o orçamento seja anterior à implementação do timeline
+        const hasCriado = timeline.some((e) => e.action === "CRIADO");
+        const syntheticCreate: TimelineEntry | null = !hasCriado
+          ? { id: "__created__", action: "CRIADO", description: "Orçamento criado", createdAt: quote.createdAt }
+          : null;
 
-              <div className="space-y-4">
-                {timeline.map((event, i) => {
-                  const cfg = TIMELINE_CONFIG[event.action] ?? { label: event.action, color: "bg-gray-400" };
-                  const date = new Date(event.createdAt);
-                  const isLast = i === timeline.length - 1;
-                  return (
-                    <div key={event.id} className="relative flex gap-3">
-                      {/* dot */}
-                      <div className={`absolute -left-5 mt-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${cfg.color} ${isLast ? "ring-2 ring-offset-1 ring-offset-background ring-primary/30" : ""}`} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold">{cfg.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </span>
+        // Também sintetiza etapas a partir dos campos de data do orçamento (sentAt, paidAt, etc.)
+        // quando não há evento real correspondente
+        const hasAction = (action: string) => timeline.some((e) => e.action === action);
+        const syntheticSent: TimelineEntry | null =
+          !hasAction("SENT") && (quote as Record<string, unknown>).sentAt
+            ? { id: "__sent__", action: "SENT", description: "Orçamento enviado ao cliente", createdAt: (quote as Record<string, unknown>).sentAt as Date }
+            : null;
+        const syntheticPaid: TimelineEntry | null =
+          !hasAction("PAID") && (quote as Record<string, unknown>).paidAt
+            ? { id: "__paid__", action: "PAID", description: "Pagamento confirmado", createdAt: (quote as Record<string, unknown>).paidAt as Date }
+            : null;
+        const syntheticCancelled: TimelineEntry | null =
+          !hasAction("CANCELLED") && (quote as Record<string, unknown>).cancelledAt
+            ? { id: "__cancelled__", action: "CANCELLED", description: "Orçamento cancelado", createdAt: (quote as Record<string, unknown>).cancelledAt as Date }
+            : null;
+
+        const allEvents: TimelineEntry[] = [
+          ...(syntheticCreate ? [syntheticCreate] : []),
+          ...timeline,
+          ...(syntheticSent ? [syntheticSent] : []),
+          ...(syntheticPaid ? [syntheticPaid] : []),
+          ...(syntheticCancelled ? [syntheticCancelled] : []),
+        ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+        return (
+          <Card>
+            <CardHeader
+              className="pb-3 cursor-pointer select-none"
+              onClick={() => setHistoryOpen((v) => !v)}
+            >
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-muted-foreground" />
+                  Histórico
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({allEvents.length} evento{allEvents.length !== 1 ? "s" : ""})
+                  </span>
+                </span>
+                {historyOpen
+                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                }
+              </CardTitle>
+            </CardHeader>
+            {historyOpen && (
+              <CardContent>
+                <div className="relative pl-5">
+                  <div className="absolute left-[7px] top-1 bottom-1 w-px bg-border" />
+                  <div className="space-y-4">
+                    {allEvents.map((event, i) => {
+                      const cfg = TIMELINE_CONFIG[event.action] ?? { label: event.action, color: "bg-gray-400" };
+                      const date = new Date(event.createdAt);
+                      const isLast = i === allEvents.length - 1;
+                      return (
+                        <div key={event.id} className="relative flex gap-3">
+                          <div className={`absolute -left-5 mt-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${cfg.color} ${isLast ? "ring-2 ring-offset-1 ring-offset-background ring-primary/30" : ""}`} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold">{cfg.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                            {event.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
+                            )}
+                          </div>
                         </div>
-                        {event.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        );
+      })()}
 
     </div>
   );
