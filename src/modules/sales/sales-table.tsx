@@ -218,7 +218,7 @@ export function SalesTable({ sales }: SalesTableProps) {
           <p className="text-center text-muted-foreground py-10 text-sm">Nenhuma venda encontrada</p>
         ) : (
           filtered.map((sale) => (
-            <Link key={sale.id} href={`/orcamentos/${sale.quoteId}`}>
+            <Link key={sale.id} href={`/vendas/${sale.id}`}>
               <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card active:bg-muted/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
@@ -271,14 +271,15 @@ export function SalesTable({ sales }: SalesTableProps) {
               </TableRow>
             ) : (
               filtered.map((sale) => (
-                <TableRow key={sale.id}>
+                <TableRow
+                  key={sale.id}
+                  className="cursor-pointer hover:bg-muted/40 transition-colors"
+                  onClick={() => { window.location.href = `/vendas/${sale.id}`; }}
+                >
                   <TableCell>
-                    <Link
-                      href={`/orcamentos/${sale.quoteId}`}
-                      className="font-mono text-sm text-primary hover:underline"
-                    >
+                    <span className="font-mono text-sm text-primary font-semibold">
                       #{sale.quote.number}
-                    </Link>
+                    </span>
                   </TableCell>
                   <TableCell className="font-medium">{sale.customer.name}</TableCell>
                   <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">

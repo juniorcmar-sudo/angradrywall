@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Angra Drywall — ERP",
   description: "Sistema ERP comercial interno — Angra Drywall",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-touch-icon.png",
+    shortcut: "/icon.png",
+  },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
