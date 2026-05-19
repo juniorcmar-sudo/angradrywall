@@ -132,10 +132,10 @@ export function SaleDetail({ sale }: SaleDetailProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-5">Produto</TableHead>
-                    <TableHead className="text-center w-16">Qtd</TableHead>
-                    <TableHead className="text-right w-28">Unitário</TableHead>
-                    <TableHead className="text-right w-28 pr-5">Total</TableHead>
+                    <TableHead className="pl-5 w-[45%]">Produto</TableHead>
+                    <TableHead className="text-center w-[15%]">Qtd</TableHead>
+                    <TableHead className="text-right w-[20%]">Unitário</TableHead>
+                    <TableHead className="text-right w-[20%] pr-5">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
