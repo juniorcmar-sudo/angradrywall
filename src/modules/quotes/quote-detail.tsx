@@ -555,91 +555,88 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
         </div>
 
         {/* Right: client + values */}
-        <div className="space-y-4">
+        <div className="sticky top-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Cliente</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div>
-                <p className="font-semibold text-base">{quote.customer.name}</p>
-                <p className="text-muted-foreground">
+            <CardContent className="p-0 divide-y divide-border">
+
+              {/* Cliente */}
+              <div className="px-4 py-3 space-y-0.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Cliente</p>
+                <p className="font-semibold text-sm">{quote.customer.name}</p>
+                <p className="text-xs text-muted-foreground">
                   {quote.customer.type === "DRYWALL_WORKER" ? "Gesseiro" : "Cliente Comum"}
                 </p>
+                {quote.customer.phone1 && (
+                  <p className="text-xs text-muted-foreground">{quote.customer.phone1}</p>
+                )}
               </div>
-              {quote.customer.phone1 && (
-                <p className="text-muted-foreground">{quote.customer.phone1}</p>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Card de ações rápidas — Imprimir + Baixar PDF */}
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
-                  onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimir
-                </Button>
-                <PDFDownloadButton
-                  quote={quote}
-                  companyName={companyName}
-                  companyPhone={companyPhone}
-                  companyAddress={companyAddress}
-                  companyCnpj={companyCnpj}
-                  companyEmail={companyEmail}
-                  signatureText={signatureText}
-                  debitFeePercent={debitFeePercent}
-                  linkFeePercent={linkFeePercent}
-                  creditInstallments={quote.creditInstallments.map((ci) => ({
-                    installments: ci.installments,
-                    value: Number(ci.value.toString()),
-                  }))}
-                  className="w-full"
-                  buttonClassName="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
-                  size="default"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle className="text-base">Valores</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(Number(quote.subtotal.toString()))}</span>
-              </div>
-              {Number(quote.freightValue.toString()) > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Frete</span>
-                  <span>{formatCurrency(Number(quote.freightValue.toString()))}</span>
+              {/* Imprimir + PDF */}
+              <div className="px-4 py-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0"
+                    onClick={() => window.open(`/api/orcamentos/${quote.id}/cupom`, "_blank")}
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
+                    Imprimir
+                  </Button>
+                  <PDFDownloadButton
+                    quote={quote}
+                    companyName={companyName}
+                    companyPhone={companyPhone}
+                    companyAddress={companyAddress}
+                    companyCnpj={companyCnpj}
+                    companyEmail={companyEmail}
+                    signatureText={signatureText}
+                    debitFeePercent={debitFeePercent}
+                    linkFeePercent={linkFeePercent}
+                    creditInstallments={quote.creditInstallments.map((ci) => ({
+                      installments: ci.installments,
+                      value: Number(ci.value.toString()),
+                    }))}
+                    className="w-full"
+                    buttonClassName="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 h-9 text-sm"
+                    size="sm"
+                  />
                 </div>
-              )}
-              {Number(quote.discount.toString()) > 0 && (
+              </div>
+
+              {/* Valores */}
+              <div className="px-4 py-3 space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Valores</p>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Desconto</span>
-                  <span className="text-red-400">
-                    −{formatCurrency(Number(quote.discount.toString()))}
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="tabular-nums">{formatCurrency(Number(quote.subtotal.toString()))}</span>
+                </div>
+                {Number(quote.freightValue.toString()) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Frete</span>
+                    <span className="tabular-nums">{formatCurrency(Number(quote.freightValue.toString()))}</span>
+                  </div>
+                )}
+                {Number(quote.discount.toString()) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Desconto</span>
+                    <span className="text-red-400 tabular-nums">
+                      −{formatCurrency(Number(quote.discount.toString()))}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline pt-2 border-t border-border">
+                  <span className="text-sm font-semibold">Total</span>
+                  <span className="text-lg font-bold text-primary tabular-nums">
+                    {formatCurrency(Number(quote.finalTotal.toString()))}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between font-bold text-xl pt-3 border-t border-border">
-                <span>Total</span>
-                <span className="text-primary">
-                  {formatCurrency(Number(quote.finalTotal.toString()))}
-                </span>
+                {quote.installments && quote.installments > 1 && quote.installmentValue && (
+                  <p className="text-xs text-primary font-medium text-right tabular-nums">
+                    {quote.installments}x de {formatCurrency(Number(quote.installmentValue.toString()))}
+                  </p>
+                )}
               </div>
-              {quote.installments && quote.installments > 1 && quote.installmentValue && (
-                <p className="text-xs text-primary font-medium text-right">
-                  {quote.installments}x de {formatCurrency(Number(quote.installmentValue.toString()))}
-                </p>
-              )}
+
             </CardContent>
           </Card>
         </div>
