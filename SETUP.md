@@ -27,20 +27,7 @@ npm run db:seed       # Popula dados iniciais
 npm run dev
 ```
 
-## 4. Acessar
-
-- URL: http://localhost:3000
-- Email: `admin@angradrywall.com`
-- Senha: `admin123`
-
 ## Credenciais padrão
-
-| Campo  | Valor                     |
-|--------|---------------------------|
-| Email  | admin@angradrywall.com    |
-| Senha  | admin123                  |
-
-> ⚠️ **Altere a senha após o primeiro login!**
 
 ## Estrutura do projeto
 
@@ -96,6 +83,6 @@ prisma/
 - O sistema salva apenas `base_price_common` e `base_price_drywall`
 - Preços são calculados dinamicamente com as taxas:
   - Pix / Dinheiro: sem taxa
-  - Débito: +1.99%
-  - Crédito: +4.99%
-  - Link até 3x: +12.71%
+  - Débito: +
+  - Crédito: 
+  - Link até 3x: 
