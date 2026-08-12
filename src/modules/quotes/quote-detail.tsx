@@ -42,6 +42,7 @@ import {
   ChevronUp,
   Printer,
   History,
+  PackageMinus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -51,6 +52,7 @@ import {
   duplicateQuote,
   deleteQuote,
   updateQuotePaymentMethod,
+  releaseQuoteStock,
 } from "./actions";
 import {
   DropdownMenu,
@@ -109,6 +111,7 @@ const TIMELINE_CONFIG: Record<string, { label: string; color: string }> = {
   PAID:               { label: "Pago",                 color: "bg-emerald-500" },
   CANCELLED:          { label: "Cancelado",            color: "bg-red-500" },
   DRAFT:              { label: "Reaberto",             color: "bg-gray-400" },
+  STOCK_RELEASED:     { label: "Estoque baixado",      color: "bg-orange-500" },
 };
 
 export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, companyCnpj, companyEmail, signatureText, debitFeePercent = 1.99, linkFeePercent = 12.71, timeline = [] }: QuoteDetailProps) {
@@ -116,6 +119,9 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
   const [loading, setLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Baixa de estoque sem pagamento
+  const [releaseOpen, setReleaseOpen] = useState(false);
+  const [releaseNotes, setReleaseNotes] = useState("");
   // Change payment method (editable until PAID)
   const [changePayOpen, setChangePayOpen] = useState(false);
   const [changeMethod, setChangeMethod] = useState<string>(quote.paymentMethod ?? "");
@@ -128,6 +134,9 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
   const isSent = quote.status === "SENT";
   const canEdit = isDraft || isSent;
   const canDelete = isDraft || isCancelled;
+  const stockReleased = Boolean(quote.stockReleasedAt);
+  const canReleaseStock =
+    !stockReleased && (isSent || quote.status === "AWAITING_PAYMENT");
 
   async function handleStatus(newStatus: string) {
     setLoading(true);
@@ -191,6 +200,20 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
       toast.error(result.error);
     } else {
       toast.success("Forma de pagamento atualizada!");
+      router.refresh();
+    }
+  }
+
+  async function handleReleaseStock() {
+    setLoading(true);
+    const result = await releaseQuoteStock(quote.id, releaseNotes);
+    setLoading(false);
+    setReleaseOpen(false);
+    setReleaseNotes("");
+    if (!result.success) {
+      toast.error(result.error);
+    } else {
+      toast.success("Estoque baixado! O orçamento entrou em Contas a Receber.");
       router.refresh();
     }
   }
@@ -289,6 +312,15 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
           <Badge variant={status.variant} className="text-sm px-3 py-1">
             {status.label}
           </Badge>
+          {stockReleased && (
+            <Badge
+              variant="warning"
+              className="text-sm px-3 py-1 bg-orange-100 text-orange-700 border-orange-200"
+            >
+              <PackageMinus className="w-3.5 h-3.5 mr-1" />
+              Estoque baixado
+            </Badge>
+          )}
           {quote.validUntil && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Clock className="w-3.5 h-3.5" />
@@ -375,6 +407,18 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             >
               <Clock className="w-3.5 h-3.5 mr-1" />
               Aguardando Pagamento
+            </Button>
+          )}
+          {canReleaseStock && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+              onClick={() => setReleaseOpen(true)}
+              disabled={loading}
+            >
+              <PackageMinus className="w-3.5 h-3.5 mr-1" />
+              Dar Baixa no Estoque
             </Button>
           )}
           {quote.status === "AWAITING_PAYMENT" && (
@@ -657,6 +701,73 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={loading}>
               Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Release stock without payment dialog */}
+      <Dialog open={releaseOpen} onOpenChange={setReleaseOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dar baixa no estoque?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2.5">
+              <p className="text-sm text-orange-800 font-medium">
+                Isto NÃO registra pagamento.
+              </p>
+              <p className="text-xs text-orange-700 mt-1">
+                Os produtos saem do estoque agora e o orçamento #{quote.number} vai para a
+                lista de <strong>Contas a Receber</strong>. Quando o cliente pagar, é só
+                confirmar o pagamento normalmente — o estoque não será baixado de novo.
+              </p>
+            </div>
+
+            <div className="rounded-md border border-border">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2.5 pb-1">
+                Sairão do estoque
+              </p>
+              <ul className="px-3 pb-2.5 space-y-1 max-h-40 overflow-y-auto">
+                {quote.items.map((item) => (
+                  <li key={item.id} className="flex justify-between text-sm">
+                    <span className="truncate pr-2">{item.product.name}</span>
+                    <span className="font-semibold tabular-nums whitespace-nowrap">
+                      {item.quantity} un
+                      <span className="text-xs text-muted-foreground font-normal ml-1.5">
+                        (tem {item.product.stock})
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Se algum produto não tiver estoque suficiente, o saldo faltante vira um
+              pedido pendente automaticamente.
+            </p>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Observação (opcional)</label>
+              <Input
+                placeholder="Ex: entrega feita na obra, cliente paga sexta"
+                value={releaseNotes}
+                onChange={(e) => setReleaseNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setReleaseOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={handleReleaseStock}
+              disabled={loading}
+            >
+              <PackageMinus className="w-3.5 h-3.5 mr-1" />
+              Confirmar baixa
             </Button>
           </div>
         </DialogContent>

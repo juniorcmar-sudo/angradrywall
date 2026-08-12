@@ -33,15 +33,17 @@ const MOVEMENT_LABELS: Record<string, { label: string; direction: MovementDirect
   ENTRY_PURCHASE: { label: "Nota de Compra",           direction: "in" },
   ENTRY_RESTOCK:  { label: "Reposição de Estoque",     direction: "in" },
   EXIT_SALE:      { label: "Saída por Venda",          direction: "out" },
+  EXIT_UNPAID:    { label: "Baixa sem Pagamento",      direction: "out" },
   EXIT_LOSS:      { label: "Saída por Perda",          direction: "out" },
   EXIT_DAMAGE:    { label: "Saída por Avaria",         direction: "out" },
   EXIT_BREAK:     { label: "Saída por Quebra",         direction: "out" },
   ADJUSTMENT:     { label: "Ajuste",                   direction: "adj" },
 };
 
-// green=entrada, blue=venda, yellow=ajuste, red=perda/dano/quebra
+// green=entrada, blue=venda, orange=baixa sem pagamento, yellow=ajuste, red=perda/dano/quebra
 function getMovementColor(type: string): string {
   if (type === "EXIT_SALE") return "text-blue-600";
+  if (type === "EXIT_UNPAID") return "text-orange-600";
   if (type === "ADJUSTMENT") return "text-amber-600";
   if (["EXIT_LOSS", "EXIT_DAMAGE", "EXIT_BREAK"].includes(type)) return "text-red-600";
   if (type.startsWith("ENTRY_")) return "text-emerald-600";
@@ -204,6 +206,8 @@ export function StockOverview({ products, movements, lowStock }: StockOverviewPr
                       ? "bg-amber-50"
                       : isIn
                       ? "bg-emerald-50"
+                      : mv.type === "EXIT_UNPAID"
+                      ? "bg-orange-50"
                       : "bg-red-50";
                     return (
                       <TableRow key={mv.id} className={rowBg}>
