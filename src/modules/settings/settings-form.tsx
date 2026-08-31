@@ -24,6 +24,7 @@ const schema = z.object({
   quoteExpirationDays: z.number().int().min(1).max(30),
   debitFeePercent: z.number().min(0),
   installmentFeePercent: z.number().min(0),
+  monthlyGoal: z.number().min(0).nullable(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -56,6 +57,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       quoteExpirationDays: settings?.quoteExpirationDays ?? 3,
       debitFeePercent: settings ? Number(settings.debitFeePercent.toString()) : 1.99,
       installmentFeePercent: settings ? Number(settings.installmentFeePercent.toString()) : 12.71,
+      monthlyGoal: settings?.monthlyGoal ? Number(settings.monthlyGoal.toString()) : null,
     },
   });
 
@@ -172,6 +174,27 @@ export function SettingsForm({ settings }: SettingsFormProps) {
               {...register("quoteExpirationDays", { valueAsNumber: true })}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Meta Mensal</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label>Meta de faturamento do mês (R$)</Label>
+          <Input
+            type="number" onFocus={(e) => e.target.select()}
+            step="0.01"
+            min="0"
+            placeholder="Ex: 50000"
+            {...register("monthlyGoal", {
+              setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
+            })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Usada para mostrar o progresso do mês no Dashboard. Deixe em branco para ocultar.
+          </p>
         </CardContent>
       </Card>
 

@@ -43,10 +43,12 @@ import {
   Printer,
   History,
   PackageMinus,
+  MoreHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency, PAYMENT_METHOD_LABELS } from "@/utils/currency";
+import { getQuoteStatus } from "@/utils/quote-status";
 import {
   updateQuoteStatus,
   duplicateQuote,
@@ -66,14 +68,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PDFDownloadButton } from "@/modules/pdf/pdf-download-button";
 import type { Quote, Customer, FreightZone, QuoteItem, Product, Category, QuoteCreditInstallment } from "@/types";
-
-const STATUS_MAP = {
-  DRAFT: { label: "Rascunho", variant: "gray" as const },
-  SENT: { label: "Enviado", variant: "info" as const },
-  AWAITING_PAYMENT: { label: "Aguard. Pagamento", variant: "warning" as const },
-  PAID: { label: "Pago", variant: "success" as const },
-  CANCELLED: { label: "Cancelado", variant: "destructive" as const },
-};
 
 const PAYMENT_OPTION_KEYS = ["PIX", "CASH", "DEBIT", "LINK_3X"] as const;
 
@@ -127,7 +121,7 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
   const [changeMethod, setChangeMethod] = useState<string>(quote.paymentMethod ?? "");
   const [changeInstallments, setChangeInstallments] = useState<number>(quote.installments ?? 1);
 
-  const status = STATUS_MAP[quote.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.DRAFT;
+  const status = getQuoteStatus(quote.status);
   const isPaid = quote.status === "PAID";
   const isCancelled = quote.status === "CANCELLED";
   const isDraft = quote.status === "DRAFT";
@@ -340,52 +334,59 @@ export function QuoteDetail({ quote, companyName, companyPhone, companyAddress, 
               Editar
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleDuplicate}>
-            <FileText className="w-3.5 h-3.5 mr-1" />
-            Duplicar
-          </Button>
-          <Button variant="outline" size="sm" onClick={copyWhatsAppMessage}>
-            <Copy className="w-3.5 h-3.5 mr-1" />
-            Copiar msg
-          </Button>
           <Button variant="outline" size="sm" onClick={openWhatsApp}>
             <MessageCircle className="w-3.5 h-3.5 mr-1" />
             WhatsApp
           </Button>
-          {quote.status === "AWAITING_PAYMENT" && (
-            <Button variant="outline" size="sm" onClick={copyPaymentMessage}>
-              <Copy className="w-3.5 h-3.5 mr-1" />
-              Mensagem Pgto
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="w-3.5 h-3.5 mr-1" />
+                Mais ações
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={handleDuplicate}>
+                <FileText className="w-3.5 h-3.5 mr-2" />
+                Duplicar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={copyWhatsAppMessage}>
+                <Copy className="w-3.5 h-3.5 mr-2" />
+                Copiar mensagem
+              </DropdownMenuItem>
+              {quote.status === "AWAITING_PAYMENT" && (
+                <DropdownMenuItem onClick={copyPaymentMessage}>
+                  <Copy className="w-3.5 h-3.5 mr-2" />
+                  Copiar mensagem de pagamento
+                </DropdownMenuItem>
+              )}
+              {(!isPaid && !isCancelled) || canDelete ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {!isPaid && !isCancelled && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => handleStatus("CANCELLED")}
+                >
+                  <XCircle className="w-3.5 h-3.5 mr-2" />
+                  Cancelar orçamento
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  Excluir
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Linha 2 — ações de etapa */}
         <div className="flex items-center gap-2">
-          {/* Cancel */}
-          {!isPaid && !isCancelled && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive hover:text-destructive border-destructive/30"
-              onClick={() => handleStatus("CANCELLED")}
-              disabled={loading}
-            >
-              <XCircle className="w-3.5 h-3.5 mr-1" />
-              Cancelar
-            </Button>
-          )}
-          {canDelete && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive hover:text-destructive border-destructive/30"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Excluir
-            </Button>
-          )}
           {/* Primary stage button */}
           {isDraft && (
             <Button

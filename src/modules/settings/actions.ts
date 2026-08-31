@@ -16,6 +16,9 @@ const settingsSchema = z.object({
   quoteExpirationDays: z.coerce.number().int().min(1).max(30),
   debitFeePercent: z.coerce.number().min(0),
   installmentFeePercent: z.coerce.number().min(0),
+  // z.coerce.number() converte null -> 0 (ver armadilhas conhecidas no CLAUDE.md);
+  // aqui null precisa continuar null para "sem meta definida".
+  monthlyGoal: z.number().min(0).optional().nullable(),
 });
 
 export async function getSettings() {
