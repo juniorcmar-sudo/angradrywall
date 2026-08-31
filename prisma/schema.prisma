@@ -361,6 +361,7 @@ model Settings {
   companyLogo           String?  @map("company_logo")
   signatureText         String?  @map("signature_text")
   quoteExpirationDays   Int      @default(3) @map("quote_expiration_days")
+  monthlyGoal           Decimal? @map("monthly_goal") @db.Decimal(10, 2)
   creditFeePercent      Decimal  @default(4.99) @map("credit_fee_percent") @db.Decimal(5, 2)
   debitFeePercent       Decimal  @default(1.99) @map("debit_fee_percent") @db.Decimal(5, 2)
   installmentFeePercent Decimal  @default(12.71) @map("installment_fee_percent") @db.Decimal(5, 2)

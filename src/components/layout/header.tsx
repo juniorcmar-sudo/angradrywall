@@ -1,5 +1,7 @@
 "use client";
 
+import { GlobalSearch } from "@/modules/search/global-search";
+
 interface HeaderProps {
   title: string;
   description?: string;
@@ -24,11 +26,10 @@ export function Header({ title, description, children }: HeaderProps) {
         </div>
       </div>
 
-      {children && (
-        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-2">
-          {children}
-        </div>
-      )}
+      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 ml-2">
+        <GlobalSearch />
+        {children}
+      </div>
     </header>
   );
 }

@@ -11,7 +11,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatCurrency } from "@/utils/currency";
-import { TrendingUp, Users, Package, FileCheck } from "lucide-react";
+import { TrendingUp, Users, Package, FileCheck, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 interface ReportsViewProps {
   data: {
@@ -46,8 +48,50 @@ export function ReportsView({ data }: ReportsViewProps) {
     compras: c._count,
   }));
 
+  function exportCsv() {
+    const rows: string[] = [];
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+
+    rows.push("Resumo");
+    rows.push(["Vendas este mês", data.monthlySales.count, data.monthlySales.total].map(esc).join(","));
+    rows.push(["Vendas este ano", data.yearlySales.count, data.yearlySales.total].map(esc).join(","));
+    rows.push(["Conversão de orçamentos (%)", data.quoteConversion.rate].map(esc).join(","));
+    rows.push("");
+
+    rows.push("Produtos Mais Vendidos");
+    rows.push(["Produto", "Quantidade", "Receita"].map(esc).join(","));
+    data.topProducts.forEach((p) => {
+      rows.push([p.product?.name ?? "—", p.totalQty, p.totalRevenue].map(esc).join(","));
+    });
+    rows.push("");
+
+    rows.push("Clientes que Mais Compraram");
+    rows.push(["Cliente", "Compras", "Total Gasto"].map(esc).join(","));
+    data.topCustomers.forEach((c) => {
+      rows.push([c.customer?.name ?? "—", c._count, c.totalSpent].map(esc).join(","));
+    });
+
+    const csv = "﻿" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-angra-drywall-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={exportCsv}>
+          <Download className="w-3.5 h-3.5 mr-1.5" />
+          Exportar CSV
+        </Button>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -122,7 +166,7 @@ export function ReportsView({ data }: ReportsViewProps) {
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={productChartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" horizontal={false} />
                 <XAxis
                   type="number"
                   tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
@@ -141,10 +185,12 @@ export function ReportsView({ data }: ReportsViewProps) {
                 <Tooltip
                   formatter={(value) => [formatCurrency(Number(value)), "Receita"]}
                   contentStyle={{
-                    backgroundColor: "#18181b",
-                    border: "1px solid #27272a",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e4e4e7",
                     borderRadius: "8px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   }}
+                  labelStyle={{ color: "#52525b" }}
                 />
                 <Bar dataKey="receita" fill="#3b82f6" radius={[0, 4, 4, 0]} />
               </BarChart>

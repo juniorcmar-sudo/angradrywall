@@ -26,16 +26,9 @@ import Link from "next/link";
 import { updateQuoteStatus, duplicateQuote } from "./actions";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/currency";
+import { getQuoteStatus } from "@/utils/quote-status";
 import { useRouter } from "next/navigation";
 import type { Quote, Customer, FreightZone, QuoteItem, Product } from "@/types";
-
-const STATUS_MAP = {
-  DRAFT: { label: "Rascunho", variant: "gray" as const },
-  SENT: { label: "Enviado", variant: "info" as const },
-  AWAITING_PAYMENT: { label: "Aguard. Pagamento", variant: "warning" as const },
-  PAID: { label: "Pago", variant: "success" as const },
-  CANCELLED: { label: "Cancelado", variant: "destructive" as const },
-};
 
 const PAYMENT_LABELS: Record<string, string> = {
   PIX: "Pix",
@@ -110,7 +103,7 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
           <p className="text-center text-muted-foreground py-10 text-sm">Nenhum orçamento encontrado</p>
         ) : (
           filtered.map((quote) => {
-            const status = STATUS_MAP[quote.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.DRAFT;
+            const status = getQuoteStatus(quote.status);
             return (
               <div
                 key={quote.id}
@@ -169,8 +162,7 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
               </TableRow>
             ) : (
               filtered.map((quote) => {
-                const status =
-                  STATUS_MAP[quote.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.DRAFT;
+                const status = getQuoteStatus(quote.status);
                 const isLocked = ["PAID", "CANCELLED"].includes(quote.status);
 
                 return (
