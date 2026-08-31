@@ -10,6 +10,7 @@ import {
   Grid3x3,
   Warehouse,
   ShoppingCart,
+  Wallet,
   Clock,
   Truck,
   BarChart3,
@@ -28,6 +29,7 @@ const mainItems = [
 const moreItems = [
   { href: "/estoque", label: "Estoque", icon: Warehouse },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
+  { href: "/contas-a-receber", label: "A Receber", icon: Wallet },
   { href: "/pedidos-pendentes", label: "Pedidos", icon: Clock },
   { href: "/fretes", label: "Fretes", icon: Truck },
   { href: "/relatorios", label: "Relatórios", icon: BarChart3 },

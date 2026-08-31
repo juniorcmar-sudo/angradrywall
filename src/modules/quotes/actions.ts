@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addDays } from "date-fns";
+import type { Prisma } from "@prisma/client";
 import type { ActionResult, QuoteStatus } from "@/types";
 
 const quoteItemSchema = z.object({
@@ -149,6 +150,153 @@ export async function updateQuoteStatus(
   }
 }
 
+type QuoteStockItem = { productId: string; quantity: number };
+
+/**
+ * Baixa o estoque dos itens de um orçamento dentro de uma transação.
+ * Quando o estoque é insuficiente, gera um PendingOrder com o saldo faltante
+ * e zera o disponível.
+ *
+ * Usado por dois fluxos distintos:
+ * - conversão em venda (pagamento confirmado) → EXIT_SALE
+ * - baixa antecipada, sem pagamento → EXIT_UNPAID
+ */
+async function deductStockForQuote(
+  tx: Prisma.TransactionClient,
+  params: {
+    items: QuoteStockItem[];
+    customerId: string;
+    quoteId: string;
+    movementType: "EXIT_SALE" | "EXIT_UNPAID";
+    referenceId: string;
+    notesLabel: string;
+  }
+) {
+  const { items, customerId, quoteId, movementType, referenceId, notesLabel } = params;
+
+  for (const item of items) {
+    const product = await tx.product.findUnique({ where: { id: item.productId } });
+    if (!product) continue;
+
+    if (product.stock >= item.quantity) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          productId: item.productId,
+          type: movementType,
+          quantity: item.quantity,
+          notes: notesLabel,
+          referenceId,
+        },
+      });
+    } else {
+      // Estoque insuficiente → pendência com o saldo faltante
+      await tx.pendingOrder.create({
+        data: {
+          customerId,
+          productId: item.productId,
+          quoteId,
+          quantity: item.quantity - product.stock,
+          fulfilled: product.stock,
+        },
+      });
+      if (product.stock > 0) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: 0 },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            type: movementType,
+            quantity: product.stock,
+            notes: `${notesLabel} (parcial)`,
+            referenceId,
+          },
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Dá baixa no estoque de um orçamento antes do pagamento (mercadoria entregue,
+ * cobrança pendente). Marca o orçamento com `stockReleasedAt` para que a
+ * confirmação de pagamento não movimente o estoque de novo.
+ */
+export async function releaseQuoteStock(
+  id: string,
+  notes?: string
+): Promise<ActionResult<void>> {
+  try {
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!quote) return { success: false, error: "Orçamento não encontrado" };
+
+    if (quote.stockReleasedAt) {
+      return { success: false, error: "O estoque deste orçamento já foi baixado" };
+    }
+    if (!["SENT", "AWAITING_PAYMENT"].includes(quote.status)) {
+      return {
+        success: false,
+        error: "Só é possível dar baixa em orçamentos enviados ou aguardando pagamento",
+      };
+    }
+
+    const label = `Baixa sem pagamento — Orçamento #${String(quote.number).padStart(4, "0")}`;
+
+    const claimed = await prisma.$transaction(async (tx) => {
+      // Trava atômica: só o primeiro clique consegue marcar o orçamento.
+      const claim = await tx.quote.updateMany({
+        where: { id, stockReleasedAt: null },
+        data: { stockReleasedAt: new Date(), stockReleaseNotes: notes?.trim() || null },
+      });
+      if (claim.count === 0) return false;
+
+      await deductStockForQuote(tx, {
+        items: quote.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        customerId: quote.customerId,
+        quoteId: quote.id,
+        movementType: "EXIT_UNPAID",
+        referenceId: quote.id,
+        notesLabel: label,
+      });
+
+      await tx.timelineEvent.create({
+        data: {
+          entityType: "QUOTE",
+          entityId: quote.id,
+          action: "STOCK_RELEASED",
+          description: notes?.trim()
+            ? `Estoque baixado sem pagamento — ${notes.trim()}`
+            : "Estoque baixado sem pagamento",
+        },
+      });
+
+      return true;
+    });
+
+    if (!claimed) {
+      return { success: false, error: "O estoque deste orçamento já foi baixado" };
+    }
+
+    revalidatePath("/orcamentos");
+    revalidatePath(`/orcamentos/${id}`);
+    revalidatePath("/contas-a-receber");
+    revalidatePath("/estoque");
+    revalidatePath("/produtos");
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Erro ao dar baixa no estoque" };
+  }
+}
+
 async function convertQuoteToSale(quoteId: string) {
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
@@ -158,6 +306,9 @@ async function convertQuoteToSale(quoteId: string) {
 
   const existingSale = await prisma.sale.findUnique({ where: { quoteId } });
   if (existingSale) return;
+
+  // Estoque já baixado antecipadamente → registra a venda sem tocar no estoque
+  const stockAlreadyReleased = Boolean(quote.stockReleasedAt);
 
   await prisma.$transaction(async (tx) => {
     const sale = await tx.sale.create({
@@ -180,53 +331,16 @@ async function convertQuoteToSale(quoteId: string) {
       },
     });
 
-    // Deduct stock for each item
-    for (const item of quote.items) {
-      const product = await tx.product.findUnique({ where: { id: item.productId } });
-      if (!product) continue;
+    if (stockAlreadyReleased) return;
 
-      if (product.stock >= item.quantity) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-        await tx.stockMovement.create({
-          data: {
-            productId: item.productId,
-            type: "EXIT_SALE",
-            quantity: item.quantity,
-            notes: `Venda #${sale.id}`,
-            referenceId: sale.id,
-          },
-        });
-      } else {
-        // Create pending order for insufficient stock
-        await tx.pendingOrder.create({
-          data: {
-            customerId: quote.customerId,
-            productId: item.productId,
-            quoteId: quote.id,
-            quantity: item.quantity - product.stock,
-            fulfilled: product.stock,
-          },
-        });
-        if (product.stock > 0) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: 0 },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: item.productId,
-              type: "EXIT_SALE",
-              quantity: product.stock,
-              notes: `Venda parcial #${sale.id}`,
-              referenceId: sale.id,
-            },
-          });
-        }
-      }
-    }
+    await deductStockForQuote(tx, {
+      items: quote.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      customerId: quote.customerId,
+      quoteId: quote.id,
+      movementType: "EXIT_SALE",
+      referenceId: sale.id,
+      notesLabel: `Venda #${sale.id}`,
+    });
   });
 }
 
@@ -445,6 +559,24 @@ export async function getQuotes(status?: string) {
       items: { include: { product: true } },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Contas a receber: orçamentos cuja mercadoria já saiu do estoque
+ * mas que ainda não foram pagos.
+ */
+export async function getReceivableQuotes() {
+  return prisma.quote.findMany({
+    where: {
+      stockReleasedAt: { not: null },
+      status: { notIn: ["PAID", "CANCELLED"] },
+    },
+    include: {
+      customer: true,
+      items: { include: { product: true } },
+    },
+    orderBy: { stockReleasedAt: "asc" },
   });
 }
 

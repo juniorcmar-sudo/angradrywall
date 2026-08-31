@@ -40,6 +40,7 @@ enum StockMovementType {
   ENTRY_PURCHASE
   ENTRY_RESTOCK
   EXIT_SALE
+  EXIT_UNPAID
   EXIT_LOSS
   EXIT_DAMAGE
   EXIT_BREAK
@@ -238,6 +239,10 @@ model Quote {
   sentAt        DateTime?     @map("sent_at")
   paidAt        DateTime?     @map("paid_at")
   cancelledAt   DateTime?     @map("cancelled_at")
+  // Baixa de estoque antecipada (mercadoria entregue antes do pagamento).
+  // Quando preenchido, o fluxo de PAID cria a venda mas não movimenta estoque.
+  stockReleasedAt    DateTime? @map("stock_released_at")
+  stockReleaseNotes  String?   @map("stock_release_notes")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
